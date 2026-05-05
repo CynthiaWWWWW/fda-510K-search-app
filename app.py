@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 import pandas as pd
 import io
+from datetime import datetime
 
 # --- 1. 網頁基本設定 ---
 st.set_page_config(page_title="FDA 510(k) 查詢器", page_icon="🩺", layout="wide")
@@ -31,7 +32,6 @@ def get_product_definition(p_code):
         class_url = f'https://api.fda.gov/device/classification.json?search=product_code:"{p_code}"'
         resp = requests.get(class_url, timeout=5).json()
         if 'results' in resp:
-            # 取得官方分類的英文名稱
             return resp['results'][0].get('device_name', 'Definition not found')
     except:
         pass
@@ -58,6 +58,7 @@ def run_query(kn, k1, k2, lmt):
             for r in raw_data:
                 k = r.get('k_number')
                 pdf = f"https://www.accessdata.fda.gov/cdrh_docs/pdf{k[1:3]}/{k}.pdf"
+                
                 # 驗證 PDF 連結有效性
                 try:
                     is_ok = session.head(pdf, timeout=2).status_code == 200
@@ -81,7 +82,7 @@ def run_query(kn, k1, k2, lmt):
             # 排序：有 PDF 的結果置頂
             processed_results.sort(key=lambda x: x['is_ok'], reverse=True)
 
-            # --- Excel 匯出邏輯 ---
+            # --- 方案 B: Excel 匯出邏輯 (不強制指定 xlsxwriter) ---
             excel_data = []
             for r in processed_results:
                 excel_data.append({
@@ -98,24 +99,25 @@ def run_query(kn, k1, k2, lmt):
             
             df = pd.DataFrame(excel_data)
             output = io.BytesIO()
-            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            # 移除 engine='xlsxwriter'，讓 pandas 使用系統預設安裝的引擎 (如 openpyxl)
+            with pd.ExcelWriter(output) as writer:
                 df.to_excel(writer, index=False, sheet_name='FDA_510k_Results')
             processed_excel = output.getvalue()
 
             # 顯示結果數量與下載按鈕
-            col1, col2 = st.columns([3, 1])
-            with col1:
+            col_info, col_dl = st.columns([3, 1])
+            with col_info:
                 st.success(f"搜尋完成：共 {len(processed_results)} 筆資料 (已將可下載 PDF 之結果置頂)")
-            with col2:
+            with col_dl:
                 st.download_button(
-                    label="📥 下載查詢結果 (Excel)",
+                    label="📥 下載 Excel",
                     data=processed_excel,
-                    file_name=f"FDA_510k_Search_{datetime.now().strftime('%Y%m%d')}.xlsx",
+                    file_name=f"FDA_510k_{datetime.now().strftime('%Y%m%d')}.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     use_container_width=True
                 )
 
-            # 顯示卡片
+            # --- 顯示查詢結果卡片 ---
             for i, r in enumerate(processed_results, 1):
                 k = r.get('k_number')
                 pdf = r['pdf_url']
@@ -128,7 +130,6 @@ def run_query(kn, k1, k2, lmt):
                 status = "✅ PDF 已就緒" if is_ok else "⚠️ 無 Summary"
                 pdf_link = f'<a href="{pdf}" target="_blank" style="color: #d9534f; text-decoration: none; font-weight: 600;">📄 下載 PDF</a>' if is_ok else ""
 
-                # 欄位內容
                 html_card = (
                     f'<div class="card" style="border-left-color: {color};">'
                     f'<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">'
@@ -160,6 +161,5 @@ with st.sidebar:
     limit = st.slider("抓取筆數", min_value=10, max_value=100, value=50, step=10)
     submit = st.button("啟動查詢", use_container_width=True, type="primary")
 
-from datetime import datetime
 if submit:
     run_query(k_num, kw1, kw2, limit)
