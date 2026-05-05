@@ -20,8 +20,8 @@ with st.sidebar:  # 建立側邊控制欄
     st.header("搜尋參數設定")  # 側邊欄標題
     k_num = st.text_input("510(k) 號碼 (例如 K231234)", "").strip().upper()  # 號碼輸入框，自動轉大寫並去除空白
     st.divider()  # 顯示分隔線
-    kw1 = st.text_input("產品關鍵字", "Laser")  # 主要關鍵字輸入框
-    kw2 = st.text_input("廠商或細項關鍵字", "")  # 次要關鍵字輸入框
+    kw1 = st.text_input("產品關鍵字", "Laser")  # 主要關鍵字輸入框 (變數名稱為 kw1)
+    kw2 = st.text_input("廠商或細項關鍵字", "")  # 次要關鍵字輸入框 (變數名稱為 kw2)
     limit = st.slider("抓取資料筆數", 5, 50, 10)  # 滑桿設定顯示筆數
     submit = st.button("啟動查詢", use_container_width=True, type="primary")  # 搜尋按鈕，設定為主要樣式
 
@@ -45,15 +45,14 @@ def run_query(kn, k1, k2, lmt):  # 定義查詢與顯示函式
 
             for i, r in enumerate(data, 1):  # 遍歷每一筆查詢結果
                 k = r.get('k_number')  # 取得 510(k) 號碼
-                # 根據 FDA 規則推導 PDF 位址：K 號碼第 2-3 位數為年份目錄
+                # 根據 FDA 規則推導 PDF 位址
                 pdf = f"https://www.accessdata.fda.gov/cdrh_docs/pdf{k[1:3]}/{k}.pdf"
                 
-                # 驗證連結有效性 (使用 HEAD 請求，不下載檔案僅檢查狀態)
+                # 驗證連結有效性 (使用 HEAD 請求)
                 is_ok = session.head(pdf, timeout=3).status_code == 200
-                color = "#28a745" if is_ok else "#ffc107"  # 依是否有檔案決定邊框顏色 (綠色/黃色)
+                color = "#28a745" if is_ok else "#ffc107"  # 依是否有檔案決定邊框顏色
                 status = "✅ PDF 已就緒" if is_ok else "⚠️ 無 Summary 文件"  # 狀態文字
 
-                # --- 修正後的 HTML 結構：確保標籤閉合正確，不再出現多餘的 </div> ---
                 html_card = f"""
                 <div class="card" style="border-left-color: {color};">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
@@ -68,11 +67,12 @@ def run_query(kn, k1, k2, lmt):  # 定義查詢與顯示函式
                     </div>
                 </div>
                 """
-                st.markdown(html_card, unsafe_allow_html=True)  # 渲染修正後的結果卡片
+                st.markdown(html_card, unsafe_allow_html=True)  # 渲染結果卡片
 
         except Exception as e:  # 捕捉意外的網路或解析錯誤
             st.error(f"連線發生錯誤：{e}")  # 顯示詳細錯誤訊息
 
 # --- 5. 執行搜尋按鈕觸發 ---
 if submit:  # 當使用者點擊「啟動查詢」按鈕時
-    run_query(k_num, keyword_1, keyword_2, limit)  # 呼叫搜尋函式執行流程
+    # 修正處：將原本錯誤的 keyword_1, keyword_2 修改為上方定義的 kw1, kw2
+    run_query(k_num, kw1, kw2, limit)
