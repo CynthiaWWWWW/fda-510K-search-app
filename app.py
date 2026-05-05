@@ -7,11 +7,43 @@ st.set_page_config(page_title="FDA 510(k) 查詢器", page_icon="🩺", layout="
 # --- 2. CSS 樣式 ---
 st.markdown("""
     <style>
+    /* 主頁面樣式 */
     .main-title { font-size: 26px; font-weight: 800; color: #1E1E1E; text-align: center; margin-bottom: 10px; }
     .info-text { font-size: 14px; color: #666; text-align: center; margin-bottom: 20px; }
     .card { border-left: 6px solid #ccc; padding: 16px; background: #f8f9fa; border-radius: 10px; margin-bottom: 15px; box-shadow: 2px 2px 5px rgba(0,0,0,0.05); }
     .index-badge { background: #4a4a4a; color: #ffffff; padding: 4px 10px; border-radius: 6px; font-size: 0.9em; font-weight: bold; margin-right: 12px; letter-spacing: 1px;}
     .code-label { background: #e9ecef; color: #495057; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-weight: bold; margin-right: 8px;}
+
+    /* 側邊欄字體大小一致性設定 */
+    [data-testid="stSidebar"] .stText, 
+    [data-testid="stSidebar"] .stMarkdown p, 
+    [data-testid="stSidebar"] label,
+    [data-testid="stSidebar"] .stButton button {
+        font-size: 16px !important;
+        font-weight: 500;
+    }
+    
+    /* 側邊欄標頭字體 */
+    [data-testid="stSidebar"] h2 {
+        font-size: 20px !important;
+        margin-bottom: -10px; /* 縮減標頭下方間距 */
+    }
+
+    /* 縮減側邊欄元件之間的垂直間距 */
+    [data-testid="stSidebar"] .element-container {
+        margin-bottom: -5px !important;
+    }
+    
+    /* 縮減 divider (分隔線) 的上下間距 */
+    [data-testid="stSidebar"] hr {
+        margin-top: 10px !important;
+        margin-bottom: 10px !important;
+    }
+
+    /* 讓輸入框標籤稍微加粗以利閱讀 */
+    [data-testid="stSidebar"] label p {
+        font-weight: 600 !important;
+    }
     </style>
     <div class="main-title">🩺 FDA 510(k) 查詢工具</div>
     <div class="info-text">連線 OpenFDA 資料庫進行精確欄位篩選</div>
@@ -33,24 +65,16 @@ def get_product_definition(p_code):
 
 # --- 4. 主查詢函式 ---
 def run_query(kn, k1, k2, app, lmt):
-    # 如果有 510(k) 號碼，則進行號碼唯一查詢
     if kn:
         q = f'k_number:"{kn}"'
     else:
-        # 建立多條件聯集 (AND 邏輯)
         query_parts = []
-        
-        # 廠商欄位搜尋 (鎖定 applicant 欄位)
         if app.strip():
             query_parts.append(f'applicant:"{app.strip()}*"')
-        
-        # 產品名稱搜尋 (鎖定 device_name 欄位)
         if k1.strip():
             query_parts.append(f'device_name:"{k1.strip()}*"')
-        
         if k2.strip():
             query_parts.append(f'device_name:"{k2.strip()}*"')
-        
         q = "+AND+".join(query_parts)
 
     if not q: 
@@ -132,7 +156,7 @@ with st.sidebar:
     k_num = st.text_input("1. 510(k) 號碼查詢", placeholder="例如: K231234").strip().upper()
     
     st.divider()
-    st.write("2. 複合篩選條件 (可同時填寫)")
+    st.markdown("**2. 複合篩選條件 (可同時填寫)**")
     app_name = st.text_input("申請廠商", placeholder="例如: Medtronic")
     kw1 = st.text_input("產品主要關鍵字", placeholder="例如: Bipolar")
     kw2 = st.text_input("產品次要關鍵字", placeholder="選填")
