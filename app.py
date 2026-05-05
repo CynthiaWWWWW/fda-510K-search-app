@@ -119,11 +119,11 @@ def run_query(kn, k1, k2, app, lmt):
 # --- 5. 側邊欄設定 ---
 with st.sidebar:
     st.header("搜尋參數設定")
-    k_num = st.text_input("510(k) 號碼", placeholder="例如: K12345").strip().upper()
+    k_num = st.text_input("510(k) 號碼", placeholder="例如: K123456").strip().upper()
     st.divider()
     kw1 = st.text_input("主要關鍵字 (Device Name)", placeholder="例如: bipolar")
     kw2 = st.text_input("次要關鍵字", "")
-    app_name = st.text_input("申請廠商 (Applicant)", placeholder="例如: Apple")
+    app_name = st.text_input("申請廠商 (Applicant)", placeholder="例如: Medtronic")
     
     limit = st.slider("抓取筆數", min_value=10, max_value=100, value=50, step=10)
     submit = st.button("啟動查詢", use_container_width=True, type="primary")
