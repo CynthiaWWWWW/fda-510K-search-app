@@ -75,11 +75,11 @@ def run_query(kn, k1, k2, lmt):
                 # PDF 按鈕 HTML
                 pdf_link = f'<a href="{pdf}" target="_blank" style="color: #d9534f; text-decoration: none; font-weight: 600;">📄 下載 PDF</a>' if is_ok else ""
 
-                # 扁平化 HTML 字串 (加入 index-badge 樣式與 Product Code 欄位)
+                # 扁平化 HTML 字串 (已將 ITEM {i:02d} 改為 {i:02d})
                 html_card = (
                     f'<div class="card" style="border-left-color: {color};">'
                     f'<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">'
-                    f'<div><span class="index-badge">ITEM {i:02d}</span><span style="font-size: 1.2em; font-weight: 800; color: #111;">510(k): {k}</span></div>'
+                    f'<div><span class="index-badge">{i:02d}</span><span style="font-size: 1.2em; font-weight: 800; color: #111;">510(k): {k}</span></div>'
                     f'<span style="color: {color}; font-weight: bold; background: white; padding: 2px 10px; border-radius: 20px; border: 1px solid {color}; font-size: 0.85em;">{status}</span>'
                     f'</div>'
                     f'<div style="margin-bottom: 8px;"><b>產品代碼：</b>{product_code}</div>'
