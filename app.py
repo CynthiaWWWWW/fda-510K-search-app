@@ -14,17 +14,14 @@ st.markdown("""
     .code-label { background: #e9ecef; color: #495057; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-weight: bold; margin-right: 8px;}
     </style>
     <div class="main-title">🩺 FDA 510(k) 查詢工具</div>
-    <div class="info-text">連線 OpenFDA 資料庫檢索並驗證 PDF 文件狀態</div>
+    <div class="info-text">連線 OpenFDA 資料庫檢索並驗證 PDF 文件狀態 (後模糊搜尋版)</div>
     """, unsafe_allow_html=True)
 
 # --- 3. 核心輔助函式 ---
 
 @st.cache_data(ttl=3600)
 def get_product_definition(p_code):
-    """透過 Product Code 查詢 FDA 分類 API 取得官方英文名稱"""
-    if not p_code or p_code == '未知':
-        return "Definition not found"
-    
+    if not p_code or p_code == '未知': return "Definition not found"
     try:
         class_url = f'https://api.fda.gov/device/classification.json?search=product_code:"{p_code}"'
         resp = requests.get(class_url, timeout=5).json()
@@ -36,16 +33,15 @@ def get_product_definition(p_code):
 
 # --- 4. 主查詢函式 ---
 def run_query(kn, k1, k2, app, lmt):
-    # 建立搜尋語法
+    # 核心：構建後模糊搜尋字串
     if kn:
-        # 如果有輸入 510(k) 號碼，以此為最高優先權
         q = f'k_number:"{kn}"'
     else:
-        # 組合關鍵字與廠商名稱
         query_parts = []
-        if k1: query_parts.append(f'device_name:{k1}*')
-        if k2: query_parts.append(f'device_name:{k2}*')
-        if app: query_parts.append(f'applicant:"{app}"') # 廠商名稱通常包含空格，使用雙引號精確比對
+        # 將輸入的字串去除多餘空白，並加上 * 號進行後模糊搜尋
+        if k1: query_parts.append(f'device_name:{k1.strip()}*')
+        if k2: query_parts.append(f'device_name:{k2.strip()}*')
+        if app: query_parts.append(f'applicant:{app.strip()}*')
         
         q = "+AND+".join(query_parts)
 
@@ -60,17 +56,15 @@ def run_query(kn, k1, k2, app, lmt):
         try:
             resp = session.get(url)
             if resp.status_code != 200: 
-                return st.warning("找不到相符的查詢結果，請嘗試減少關鍵字或檢查廠商名稱拼字。")
+                return st.warning("找不到相符的查詢結果，請檢查關鍵字拼字或縮減條件。")
             
             raw_data = resp.json().get('results', [])
             processed_results = []
 
             for r in raw_data:
                 k = r.get('k_number')
-                # 建立 PDF 預期連結
                 pdf = f"https://www.accessdata.fda.gov/cdrh_docs/pdf{k[1:3]}/{k}.pdf"
                 
-                # 驗證 PDF 連結有效性
                 try:
                     is_ok = session.head(pdf, timeout=2).status_code == 200
                 except:
@@ -78,7 +72,6 @@ def run_query(kn, k1, k2, app, lmt):
                 
                 p_code = r.get('product_code', '')
                 eng_def = get_product_definition(p_code)
-                
                 raw_date = r.get('decision_date', '')
                 formatted_date = f"{raw_date[:4]}-{raw_date[4:6]}-{raw_date[6:]}" if len(raw_date) == 8 else raw_date
 
@@ -91,10 +84,10 @@ def run_query(kn, k1, k2, app, lmt):
             # 排序：有 PDF 的結果置頂
             processed_results.sort(key=lambda x: x['is_ok'], reverse=True)
 
-            st.success(f"搜尋完成：共 {len(processed_results)} 筆資料")
+            st.success(f"搜尋完成：共 {len(processed_results)} 筆資料 (已自動套用後模糊搜尋)")
 
             for i, r in enumerate(processed_results, 1):
-                k = r.get('k_number')
+                k = r.get('k_number', 'N/A')
                 pdf = r['pdf_url']
                 is_ok = r['is_ok']
                 p_code = r.get('product_code', 'N/A')
@@ -129,12 +122,12 @@ def run_query(kn, k1, k2, app, lmt):
 # --- 5. 側邊欄設定 ---
 with st.sidebar:
     st.header("搜尋參數設定")
-    k_num = st.text_input("510(k) 號碼 (例如 K231234)", "").strip().upper()
+    k_num = st.text_input("510(k) 號碼 (例如 K23)", "").strip().upper()
+    st.info("💡 輸入 K 加上前兩位數字可搜尋特定年份")
     st.divider()
     kw1 = st.text_input("主關鍵字 (Device Name)", "Laser")
     kw2 = st.text_input("次要關鍵字", "")
-    # --- 新增：申請廠商查詢欄位 ---
-    app_name = st.text_input("申請廠商名稱 (Applicant)", placeholder="例如: Apple Inc.")
+    app_name = st.text_input("申請廠商 (Applicant)", placeholder="例如: Apple")
     
     limit = st.slider("抓取筆數", min_value=10, max_value=100, value=50, step=10)
     submit = st.button("啟動查詢", use_container_width=True, type="primary")
