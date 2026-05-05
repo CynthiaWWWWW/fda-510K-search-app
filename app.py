@@ -14,35 +14,37 @@ st.markdown("""
     .index-badge { background: #4a4a4a; color: #ffffff; padding: 4px 10px; border-radius: 6px; font-size: 0.9em; font-weight: bold; margin-right: 12px; letter-spacing: 1px;}
     .code-label { background: #e9ecef; color: #495057; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-weight: bold; margin-right: 8px;}
 
-    /* 側邊欄字體大小一致性設定 */
-    [data-testid="stSidebar"] .stText, 
+    /* --- 側邊欄字體與間距核心調整 --- */
+    
+    /* 1. 統一側邊欄所有層級文字大小 (包含 Markdown, Labels, Headers) */
     [data-testid="stSidebar"] .stMarkdown p, 
-    [data-testid="stSidebar"] label,
-    [data-testid="stSidebar"] .stButton button {
-        font-size: 16px !important;
-        font-weight: 500;
-    }
-    
-    /* 側邊欄標頭字體 */
+    [data-testid="stSidebar"] label p, 
     [data-testid="stSidebar"] h2 {
-        font-size: 20px !important;
-        margin-bottom: -10px; /* 縮減標頭下方間距 */
+        font-size: 17px !important;
+        font-weight: 600 !important;
+        color: #31333F;
     }
 
-    /* 縮減側邊欄元件之間的垂直間距 */
+    /* 2. 調整標題 (st.header) 的間距，使其不要與下方元件太貼 */
+    [data-testid="stSidebar"] h2 {
+        margin-bottom: 15px !important;
+        padding-top: 10px !important;
+    }
+
+    /* 3. 控制元件之間的上下間距 (稍微放寬避免太擠) */
     [data-testid="stSidebar"] .element-container {
-        margin-bottom: -5px !important;
+        margin-bottom: 8px !important;
     }
     
-    /* 縮減 divider (分隔線) 的上下間距 */
+    /* 4. 調整分隔線 (divider) 的間距 */
     [data-testid="stSidebar"] hr {
-        margin-top: 10px !important;
-        margin-bottom: 10px !important;
+        margin-top: 20px !important;
+        margin-bottom: 20px !important;
     }
 
-    /* 讓輸入框標籤稍微加粗以利閱讀 */
-    [data-testid="stSidebar"] label p {
-        font-weight: 600 !important;
+    /* 5. 按鈕字體同步 */
+    [data-testid="stSidebar"] .stButton button p {
+        font-size: 16px !important;
     }
     </style>
     <div class="main-title">🩺 FDA 510(k) 查詢工具</div>
@@ -153,15 +155,20 @@ def run_query(kn, k1, k2, app, lmt):
 # --- 5. 側邊欄設定 ---
 with st.sidebar:
     st.header("搜尋參數")
-    k_num = st.text_input("1. 510(k) 號碼查詢", placeholder="例如: K231234").strip().upper()
+    
+    # 這裡使用 Markdown 加粗，CSS 會自動將其字體同步
+    st.markdown("1. 510(k) 號碼查詢")
+    k_num = st.text_input("輸入號碼", placeholder="例如: K231234", label_visibility="collapsed").strip().upper()
     
     st.divider()
-    st.markdown("**2. 複合篩選條件 (可同時填寫)**")
+    
+    st.markdown("2. 複合篩選條件 (可同時填寫)")
     app_name = st.text_input("申請廠商", placeholder="例如: Medtronic")
     kw1 = st.text_input("產品主要關鍵字", placeholder="例如: Bipolar")
     kw2 = st.text_input("產品次要關鍵字", placeholder="選填")
     
     st.divider()
+    
     limit = st.slider("抓取筆數", min_value=10, max_value=100, value=50, step=10)
     submit = st.button("啟動查詢", use_container_width=True, type="primary")
 
