@@ -10,9 +10,9 @@ st.markdown("""
     .main-title { font-size: 32px; font-weight: 800; color: #1E1E1E; text-align: center; margin-bottom: 5px; }
     .info-text { font-size: 16px; color: #666; text-align: center; margin-bottom: 25px; }
     .card { border-left: 6px solid #ccc; padding: 20px; background: #ffffff; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border: 1px solid #eee; }
-    .idx-badge { background-color: #343a40; color: white; padding: 2px 10px; border-radius: 6px; font-size: 0.9em; margin-right: 12px; font-weight: 600; }
-    .k-num-text { font-size: 1.3em; font-weight: 800; color: #000; }
-    .label { font-weight: 700; color: #555; min-width: 100px; display: inline-block; }
+    .idx-badge { background-color: #343a40; color: white; padding: 3px 12px; border-radius: 6px; font-size: 0.85em; margin-right: 12px; font-weight: 600; display: inline-block; vertical-align: middle; }
+    .k-num-text { font-size: 1.25em; font-weight: 800; color: #000; vertical-align: middle; }
+    .label { font-weight: 700; color: #555; min-width: 110px; display: inline-block; }
     </style>
     <div class="main-title">🩺 FDA 510(k) 查詢器</div>
     <div class="info-text">透過 OpenFDA API 即時檢索、排序並驗證官方 PDF Summary</div>
@@ -38,7 +38,7 @@ def run_query(kn, k1, k2, lmt):
     session = requests.Session()
     session.headers.update({'User-Agent': 'Mozilla/5.0'})
 
-    with st.spinner('🔍 正在檢索 FDA 資料庫並驗證 PDF 檔案路徑...'):
+    with st.spinner('🔍 正在檢索 FDA 資料並排定 PDF 優先順序...'):
         try:
             resp = session.get(url)
             if resp.status_code != 200: return st.warning("找不到相符的結果")
@@ -46,18 +46,17 @@ def run_query(kn, k1, k2, lmt):
             raw_data = resp.json().get('results', [])
             processed_results = []
 
-            # 步驟一：資料預處理與 PDF 驗證
+            # 步驟一：預處理資料與驗證 PDF
             for r in raw_data:
                 k = r.get('k_number', 'N/A')
                 pdf_url = f"https://www.accessdata.fda.gov/cdrh_docs/pdf{k[1:3]}/{k}.pdf"
                 
-                # 驗證 PDF 是否存在 (HEAD 請求)
+                # 驗證連結 (HEAD 請求)
                 is_ok = session.head(pdf_url, timeout=3).status_code == 200
                 
                 processed_results.append({
                     "k_num": k,
-                    "class_name": r.get('device_name', '未知'), # OpenFDA 中 device_name 通常是分類名
-                    "trade_name": r.get('proprietary_name', '未提供產品名稱'),
+                    "prod_class": r.get('device_name', '未知'), # 這裡對應 Product Classification
                     "applicant": r.get('applicant', '未知'),
                     "is_ok": is_ok,
                     "pdf_url": pdf_url
@@ -66,30 +65,30 @@ def run_query(kn, k1, k2, lmt):
             # 步驟二：排序 (將有 PDF 的排在前面)
             processed_results.sort(key=lambda x: x['is_ok'], reverse=True)
 
-            st.success(f"✅ 找到 {len(processed_results)} 筆資料 (已將可下載 PDF 的結果優先顯示)")
+            st.success(f"✅ 找到 {len(processed_results)} 筆資料 (已為您置頂可下載 PDF 的結果)")
 
-            # 步驟三：呈現美化後的結果
+            # 步驟三：呈現結果
             for i, item in enumerate(processed_results, 1):
                 color = "#28a745" if item['is_ok'] else "#ffc107"
                 status = "✅ PDF 已就緒" if item['is_ok'] else "⚠️ 無官方 Summary"
                 
-                pdf_btn = f'<a href="{item["pdf_url"]}" target="_blank" style="color: #ffffff; background-color: #d9534f; padding: 4px 12px; border-radius: 4px; text-decoration: none; font-size: 0.85em; font-weight: 600;">📄 下載 PDF</a>' if item['is_ok'] else ""
+                # PDF 按鈕
+                pdf_btn = f'<a href="{item["pdf_url"]}" target="_blank" style="color: #ffffff; background-color: #d9534f; padding: 5px 15px; border-radius: 4px; text-decoration: none; font-size: 0.85em; font-weight: 600;">📄 下載 PDF</a>' if item['is_ok'] else ""
 
-                # 建構扁平化 HTML (解決 </div> 殘留問題)
+                # 扁平化字串拼接，確保渲染穩定
                 html_card = (
                     f'<div class="card" style="border-left-color: {color};">'
-                    f'<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">'
+                    f'<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px;">'
                     f'<div>'
-                    f'<span class="idx-badge">RESULT {i:02d}</span>'
+                    f'<span class="idx-badge">NO. {i:02d}</span>'
                     f'<span class="k-num-text">510(k): {item["k_num"]}</span>'
                     f'</div>'
                     f'<span style="color: {color}; font-weight: bold; background: #fff; padding: 3px 12px; border-radius: 20px; border: 1px solid {color}; font-size: 0.85em;">{status}</span>'
                     f'</div>'
-                    f'<div style="margin-bottom: 8px;"><span class="label">分類名稱：</span>{item["class_name"]}</div>'
-                    f'<div style="margin-bottom: 8px;"><span class="label">產品名稱：</span>{item["trade_name"]}</div>'
-                    f'<div style="margin-bottom: 15px;"><span class="label">申請廠商：</span>{item["applicant"]}</div>'
-                    f'<div style="display: flex; gap: 15px; align-items: center; border-top: 1px solid #eee; padding-top: 15px;">'
-                    f'<a href="https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfPMN/pmn.cfm?ID={item["k_num"]}" target="_blank" style="color: #007bff; text-decoration: none; font-weight: 600; font-size: 0.85em;">🌐 查看官方詳細資訊</a>'
+                    f'<div style="margin-bottom: 10px;"><span class="label">產品分類：</span>{item["prod_class"]}</div>'
+                    f'<div style="margin-bottom: 18px;"><span class="label">申請廠商：</span>{item["applicant"]}</div>'
+                    f'<div style="display: flex; gap: 20px; align-items: center; border-top: 1px solid #eee; padding-top: 15px;">'
+                    f'<a href="https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfPMN/pmn.cfm?ID={item["k_num"]}" target="_blank" style="color: #007bff; text-decoration: none; font-weight: 600; font-size: 0.85em;">🌐 查看官方資料頁</a>'
                     f'{pdf_btn}'
                     f'</div>'
                     f'</div>'
@@ -98,7 +97,7 @@ def run_query(kn, k1, k2, lmt):
                 st.markdown(html_card, unsafe_allow_html=True)
 
         except Exception as e:
-            st.error(f"連線或資料解析發生異常：{e}")
+            st.error(f"發生非預期錯誤：{e}")
 
 # --- 5. 執行搜尋按鈕觸發 ---
 if submit:
