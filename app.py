@@ -14,7 +14,7 @@ st.markdown("""
     .code-label { background: #e9ecef; color: #495057; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-weight: bold; margin-right: 8px;}
     </style>
     <div class="main-title">🩺 FDA 510(k) 查詢工具</div>
-    <div class="info-text">連線 OpenFDA 資料庫檢索並驗證 PDF 文件狀態 (後模糊搜尋版)</div>
+    <div class="info-text">連線 OpenFDA 資料庫檢索並驗證 PDF 文件狀態</div>
     """, unsafe_allow_html=True)
 
 # --- 3. 核心輔助函式 ---
