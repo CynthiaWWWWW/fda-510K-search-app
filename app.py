@@ -57,7 +57,10 @@ def run_query(kn, k1, k2, lmt):
                 k = r.get('k_number')
                 pdf = f"https://www.accessdata.fda.gov/cdrh_docs/pdf{k[1:3]}/{k}.pdf"
                 # 驗證 PDF 連結有效性
-                is_ok = session.head(pdf, timeout=2).status_code == 200
+                try:
+                    is_ok = session.head(pdf, timeout=2).status_code == 200
+                except:
+                    is_ok = False
                 
                 # 取得產品代碼對應的分類名稱
                 p_code = r.get('product_code', '')
@@ -100,8 +103,7 @@ def run_query(kn, k1, k2, lmt):
                     f'<div style="margin-bottom: 8px;"><b>判定日期：</b>{decision_date}</div>'
                     f'<div style="margin-bottom: 8px;"><b>產品代碼與分類：</b><span class="code-label">{p_code}</span> <span style="color: #555;">{p_desc}</span></div>'
                     f'<div style="margin-bottom: 8px;"><b>設備名稱：</b>{r.get("device_name", "Unknown")}</div>'
-                    f'<div style="margin-bottom: 8px;"><b>申請廠商：</b>{r.get("applicant", "Unknown")}</div>'
-                    f'<div style="margin-bottom: 12px; color: #666; font-size: 0.9em;"><b>對照品 (Predicate Device)：</b>請參閱 PDF Summary 第 5 節</div>'
+                    f'<div style="margin-bottom: 12px;"><b>申請廠商：</b>{r.get("applicant", "Unknown")}</div>'
                     f'<div style="display: flex; gap: 15px;">'
                     f'<a href="https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfPMN/pmn.cfm?ID={k}" target="_blank" style="color: #007bff; text-decoration: none; font-weight: 600;">🌐 官方資訊</a>'
                     f'{pdf_link}'
