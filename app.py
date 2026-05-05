@@ -29,17 +29,28 @@ def get_product_definition(p_code):
         class_url = f'https://api.fda.gov/device/classification.json?search=product_code:"{p_code}"'
         resp = requests.get(class_url, timeout=5).json()
         if 'results' in resp:
-            # 取得官方分類的英文名稱
             return resp['results'][0].get('device_name', 'Definition not found')
     except:
         pass
     return "Unknown"
 
 # --- 4. 主查詢函式 ---
-def run_query(kn, k1, k2, lmt):
-    # 建立搜尋字串
-    q = f'k_number:"{kn}"' if kn else "+AND+".join([f'device_name:{k}*' for k in [k1, k2] if k])
-    if not q: return st.error("請輸入 510(k) 號碼或產品關鍵字")
+def run_query(kn, k1, k2, app, lmt):
+    # 建立搜尋語法
+    if kn:
+        # 如果有輸入 510(k) 號碼，以此為最高優先權
+        q = f'k_number:"{kn}"'
+    else:
+        # 組合關鍵字與廠商名稱
+        query_parts = []
+        if k1: query_parts.append(f'device_name:{k1}*')
+        if k2: query_parts.append(f'device_name:{k2}*')
+        if app: query_parts.append(f'applicant:"{app}"') # 廠商名稱通常包含空格，使用雙引號精確比對
+        
+        q = "+AND+".join(query_parts)
+
+    if not q: 
+        return st.error("請輸入 510(k) 號碼、產品關鍵字或廠商名稱")
 
     url = f'https://api.fda.gov/device/510k.json?search={q}&limit={lmt}'
     session = requests.Session()
@@ -48,25 +59,26 @@ def run_query(kn, k1, k2, lmt):
     with st.spinner('正在從 FDA 搜尋並驗證 PDF 連結...'):
         try:
             resp = session.get(url)
-            if resp.status_code != 200: return st.warning("找不到相符的查詢結果")
+            if resp.status_code != 200: 
+                return st.warning("找不到相符的查詢結果，請嘗試減少關鍵字或檢查廠商名稱拼字。")
             
             raw_data = resp.json().get('results', [])
             processed_results = []
 
             for r in raw_data:
                 k = r.get('k_number')
+                # 建立 PDF 預期連結
                 pdf = f"https://www.accessdata.fda.gov/cdrh_docs/pdf{k[1:3]}/{k}.pdf"
+                
                 # 驗證 PDF 連結有效性
                 try:
                     is_ok = session.head(pdf, timeout=2).status_code == 200
                 except:
                     is_ok = False
                 
-                # 取得產品代碼對應的分類名稱
                 p_code = r.get('product_code', '')
                 eng_def = get_product_definition(p_code)
                 
-                # 格式化日期 (YYYYMMDD -> YYYY-MM-DD)
                 raw_date = r.get('decision_date', '')
                 formatted_date = f"{raw_date[:4]}-{raw_date[4:6]}-{raw_date[6:]}" if len(raw_date) == 8 else raw_date
 
@@ -79,7 +91,7 @@ def run_query(kn, k1, k2, lmt):
             # 排序：有 PDF 的結果置頂
             processed_results.sort(key=lambda x: x['is_ok'], reverse=True)
 
-            st.success(f"搜尋完成：共 {len(processed_results)} 筆資料 (已將可下載 PDF 之結果置頂)")
+            st.success(f"搜尋完成：共 {len(processed_results)} 筆資料")
 
             for i, r in enumerate(processed_results, 1):
                 k = r.get('k_number')
@@ -93,7 +105,6 @@ def run_query(kn, k1, k2, lmt):
                 status = "✅ PDF 已就緒" if is_ok else "⚠️ 無 Summary"
                 pdf_link = f'<a href="{pdf}" target="_blank" style="color: #d9534f; text-decoration: none; font-weight: 600;">📄 下載 PDF</a>' if is_ok else ""
 
-                # 欄位內容
                 html_card = (
                     f'<div class="card" style="border-left-color: {color};">'
                     f'<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">'
@@ -122,8 +133,11 @@ with st.sidebar:
     st.divider()
     kw1 = st.text_input("主關鍵字 (Device Name)", "Laser")
     kw2 = st.text_input("次要關鍵字", "")
+    # --- 新增：申請廠商查詢欄位 ---
+    app_name = st.text_input("申請廠商名稱 (Applicant)", placeholder="例如: Apple Inc.")
+    
     limit = st.slider("抓取筆數", min_value=10, max_value=100, value=50, step=10)
     submit = st.button("啟動查詢", use_container_width=True, type="primary")
 
 if submit:
-    run_query(k_num, kw1, kw2, limit)
+    run_query(k_num, kw1, kw2, app_name, limit)
