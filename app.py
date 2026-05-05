@@ -1,123 +1,79 @@
-import streamlit as st  # 匯入 Streamlit 工具箱
-import requests  # 匯入 Requests 工具箱
+import streamlit as st  # 匯入 Streamlit 網頁框架套件
+import requests  # 匯入 Requests 用於處理網路請求
 
-# 設定網頁標題與圖示
-st.set_page_config(page_title="FDA 510(k) 搜尋工具", page_icon="🔍")
+# --- 1. 頁面基本設定 ---
+st.set_page_config(page_title="FDA 510(k) 查詢", page_icon="🩺")  # 設定網頁標籤標題與圖示
 
-# 網頁大標題
-st.title("🔍 FDA 510(k) 醫療器材搜尋器")
-st.markdown("輸入 510(k) 號碼或關鍵字進行搜尋，系統將自動優先排序並驗證 PDF 文件。")
+# --- 2. CSS 樣式與標題 ---
+st.title("🩺 FDA 510(k) 醫療器材查詢器")  # 顯示網頁大標題
+st.markdown("透過 OpenFDA API 快速檢索 510(k) 申報資料並驗證 PDF 文件。")  # 顯示副標題說明
 
-# 側邊欄搜尋參數設定
-with st.sidebar:
-    st.header("搜尋參數")
-    # 510(k) 號碼搜尋
-    k_num_search = st.text_input("510(k) 號碼 (例如 K231234)", "").strip()
-    st.write("--- 或使用關鍵字搜尋 ---")
-    # 關鍵字搜尋
-    keyword_1 = st.text_input("產品關鍵字 (例如 Las)", "Laser")
-    keyword_2 = st.text_input("廠商或細項關鍵字", "")
-    # 數量選擇
-    limit = st.slider("抓取資料筆數", 5, 50, 15)
-    st.info("提示：若填寫了 510(k) 號碼，將優先進行精確搜尋。")
+# --- 3. 側邊欄參數設定 ---
+with st.sidebar:  # 建立側邊選單
+    st.header("搜尋參數設定")  # 側邊欄小標題
+    k_num_search = st.text_input("510(k) 號碼 (精確搜尋)", "").strip().upper()  # 號碼輸入框，自動轉大寫並去空格
+    st.divider()  # 顯示分隔線
+    keyword_1 = st.text_input("產品關鍵字", "Laser")  # 主要關鍵字輸入框
+    keyword_2 = st.text_input("廠商名稱或細項", "")  # 次要關鍵字輸入框
+    limit = st.slider("顯示結果筆數", 5, 50, 10)  # 滑桿選擇抓取數量
+    search_btn = st.button("啟動查詢", use_container_width=True)  # 寬版搜尋按鈕
 
-# 核心搜尋功能
-def run_search(kn, k1, k2, lmt):
-    # 決定搜尋模式
-    if kn:
-        search_query = f'k_number:"{kn}"'
-    else:
-        k_list = [k.strip() for k in [k1, k2] if k.strip()]
-        if not k_list:
-            st.error("請輸入 510(k) 號碼或至少一個關鍵字！")
-            return
-        # 使用字首包含搜尋語法
-        search_query = "+AND+".join([f'device_name:{k}*' for k in k_list])
+# --- 4. 核心功能函式 ---
+def fetch_fda_data(kn, k1, k2, lmt):  # 定義抓取 FDA 資料的函式
+    # 組合搜尋語法：若有 K 號碼則優先精確搜尋，否則使用關鍵字模糊搜尋
+    query = f'k_number:"{kn}"' if kn else "+AND+".join([f'device_name:{k}*' for k in [k1, k2] if k])
+    if not query: return st.error("請提供至少一個搜尋條件")  # 若無條件則報錯並中斷
     
-    # 組合 OpenFDA API 網址
-    api_url = f'https://api.fda.gov/device/510k.json?search={search_query}&limit={lmt}'
-    
-    # 瀏覽器標頭偽裝
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-    }
+    api_url = f'https://api.fda.gov/device/510k.json?search={query}&limit={lmt}'  # 組合 OpenFDA API 網址
+    session = requests.Session()  # 建立 Session 以優化多次連線效能
+    headers = {'User-Agent': 'Mozilla/5.0'}  # 設定簡單的瀏覽器標頭避免被阻擋
 
-    with st.spinner('正在從 FDA 搜尋並驗證連結...'):
+    with st.spinner('正在從 FDA 取得最新資料並驗證連結...'):  # 顯示讀取中動畫
         try:
-            response = requests.get(api_url, headers=headers)
-            if response.status_code != 200:
-                st.warning("找不到符合條件的結果。")
-                return
+            resp = session.get(api_url, headers=headers)  # 發送 API 請求
+            if resp.status_code != 200: return st.warning("找不到相符的結果。")  # 若 API 回報非 200 則提示找不到
             
-            raw_results = response.json().get('results', [])
-            processed_data = []
+            results = resp.json().get('results', [])  # 從 JSON 結果中提取資料列表
+            processed = []  # 準備存放處理後資料的清單
 
-            # 遍歷並驗證連結
-            for r in raw_results:
-                k_num = r.get('k_number')
-                prefix = k_num[1:3]
+            for r in results:  # 遍歷每一筆 API 回傳資料
+                k = r.get('k_number')  # 取得 510(k) 號碼
+                # FDA PDF 路徑規則：K 號碼前兩位數代表年份資料夾 (例如 K231234 -> pdf23)
+                pdf_base = f"https://www.accessdata.fda.gov/cdrh_docs/pdf{k[1:3]}/{k}.pdf"
                 
-                # 檔案連結與官網連結
-                base_pdf_url = f"https://www.accessdata.fda.gov/cdrh_docs/pdf{prefix}/{k_num}"
-                db_url = f"https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfPMN/pmn.cfm?ID={k_num}"
+                # 驗證連結是否存在 (使用 HEAD 請求節省流量)
+                has_file = session.head(pdf_base, timeout=3).status_code == 200
                 
-                valid_pdf_url = None
-                for ext in [".pdf", ".PDF"]:
-                    try:
-                        check = requests.head(base_pdf_url + ext, headers=headers, timeout=3, allow_redirects=True)
-                        if check.status_code == 200:
-                            valid_pdf_url = base_pdf_url + ext
-                            break
-                    except:
-                        continue
-                
-                processed_data.append({
-                    'k_num': k_num,
-                    'device_name': r.get('device_name', '未知產品'),
-                    'applicant': r.get('applicant', '未知廠商'),
-                    'pdf_url': valid_pdf_url,
-                    'db_url': db_url,
-                    'has_file': True if valid_pdf_url else False
+                processed.append({  # 將整理好的資訊加入清單
+                    "id": k,
+                    "name": r.get('device_name', '未知'),
+                    "firm": r.get('applicant', '未知'),
+                    "url": pdf_base if has_file else None,
+                    "web": f"https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfPMN/pmn.cfm?ID={k}",
+                    "ok": has_file
                 })
 
-            # 依檔案存在與否排序
-            sorted_res = sorted(processed_data, key=lambda x: x['has_file'], reverse=True)
-
-            st.divider()
-            st.success(f"搜尋完成！共找到 {len(sorted_res)} 筆資料。")
-
-            # 顯示結果卡片
-            for i, item in enumerate(sorted_res, 1):
-                bg_color = "#f0fdf4" if item['has_file'] else "#fffbef"
-                border_color = "#28a745" if item['has_file'] else "#ffc107"
-                status_text = "✅ 連結已就緒" if item['has_file'] else "⚠️ 無 Summary 文件"
-                
-                # --- HTML 介面更新：加上 510(k) Number 標題並加大 ---
+            # 顯示結果列表
+            st.success(f"找到 {len(processed)} 筆資料 (優先顯示有 PDF 之案件)")  # 顯示成功提示
+            for i, item in enumerate(processed, 1):  # 遍歷並呈現卡片介面
+                color = "#28a745" if item['ok'] else "#ffc107"  # 根據是否有檔案決定邊框顏色
                 st.markdown(f"""
-                <div style="border-left: 5px solid {border_color}; padding: 15px; margin-bottom: 20px; background-color: {bg_color}; border-radius: 8px; box-shadow: 2px 2px 8px rgba(0,0,0,0.05);">
-                    <div style="display: flex; align-items: baseline; margin-bottom: 10px;">
-                        <span style="background-color: #007bff; color: white; padding: 2px 8px; border-radius: 4px; font-weight: bold; margin-right: 12px; font-size: 0.9em;">#{i}</span>
-                        <span style="font-size: 1.25em; font-weight: 800; color: #1a1a1a;">
-                            <span style="color: #555; font-weight: 600;">510(k) Number:</span> {item['k_num']}
-                        </span>
-                        <span style="margin-left: auto; font-size: 0.85em; font-weight: bold; color: {border_color}; background: white; padding: 2px 8px; border-radius: 20px; border: 1px solid {border_color};">
-                            {status_text}
-                        </span>
+                <div style="border-left: 6px solid {color}; padding: 16px; background: #f8f9fa; border-radius: 8px; margin-bottom: 15px;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <b style="font-size: 1.2em; color: #111;">#{i} 510(k): {item['id']}</b>
+                        <span style="color: {color}; font-weight: bold;">{"✅ PDF Ready" if item['ok'] else "⚠️ No Summary"}</span>
                     </div>
-                    <div style="margin-left: 42px; line-height: 1.7; border-top: 1px solid rgba(0,0,0,0.05); padding-top: 8px;">
-                        <div style="margin-bottom: 4px;"><b>產品名稱：</b> <span style="color: #333;">{item['device_name']}</span></div>
-                        <div style="margin-bottom: 10px;"><b>申請廠商：</b> <span style="color: #333;">{item['applicant']}</span></div>
-                        <div style="margin-top: 12px;">
-                            {"<a href='" + item['pdf_url'] + "' target='_blank' style='color: #007bff; font-weight: bold; text-decoration: underline; margin-right: 15px;'>👉 開啟 PDF Summary</a>" if item['has_file'] else "<span style='color: #d9534f; font-size: 0.9em; display: block; margin-bottom: 8px;'>ℹ️ 備註：此案件於 FDA 伺服器未偵測到 PDF 檔案。</span>"}
-                            <a href="{item['db_url']}" target="_blank" style="color: #007bff; font-weight: bold; text-decoration: underline;">👉 前往 FDA 官網登記頁面</a>
-                        </div>
+                    <p style="margin: 8px 0;"><b>設備：</b>{item['name']}<br><b>廠商：</b>{item['firm']}</p>
+                    <div style="margin-top: 10px;">
+                        <a href="{item['web']}" target="_blank" style="margin-right: 15px; color: #007bff; text-decoration: none; font-weight: 600;">🌐 官網資訊</a>
+                        {f'<a href="{item["url"]}" target="_blank" style="color: #d9534f; text-decoration: none; font-weight: 600;">📄 下載 PDF</a>' if item['ok'] else ""}
                     </div>
                 </div>
-                """, unsafe_allow_html=True)
+                """, unsafe_allow_html=True)  # 使用 HTML 渲染卡片
 
-        except Exception as e:
-            st.error(f"連線發生錯誤: {e}")
+        except Exception as e:  # 捕捉意外錯誤
+            st.error(f"連線異常：{str(e)}")  # 顯示錯誤訊息
 
-# 按鈕啟動搜尋
-if st.sidebar.button("執行搜尋"):
-    run_search(k_num_search, keyword_1, keyword_2, limit)
+# --- 5. 啟動邏輯 ---
+if search_btn:  # 當點擊搜尋按鈕時
+    fetch_fda_data(k_num_search, keyword_1, keyword_2, limit)  # 執行資料抓取函式
