@@ -14,17 +14,18 @@ st.markdown("""
     .index-badge { background: #4a4a4a; color: #ffffff; padding: 4px 10px; border-radius: 6px; font-size: 0.9em; font-weight: bold; margin-right: 12px; letter-spacing: 1px;}
     .code-label { background: #e9ecef; color: #495057; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-weight: bold; margin-right: 8px;}
 
-    /* --- 側邊欄精修排版 --- */
+    /* --- 側邊欄精修排版 (移除分隔線版) --- */
     
-    /* 1. 標題類：1. & 2. 項 (使用 Markdown p 標籤呈現) */
+    /* 1. 標題類：1. & 2. 項 (粗體 16px) */
     [data-testid="stSidebar"] .stMarkdown p strong {
         font-size: 16px !important;
         font-weight: 800 !important;
         display: block;
-        margin-top: 5px;
+        margin-top: 15px; /* 增加頂部間距來區隔區塊 */
+        margin-bottom: 5px;
     }
 
-    /* 2. 欄位標籤類：申請廠商、關鍵字等 (不要粗體，小一號) */
+    /* 2. 欄位標籤類：申請廠商、關鍵字等 (非粗體 14px) */
     [data-testid="stSidebar"] .stWidgetLabel p {
         font-size: 14px !important;
         font-weight: 400 !important;
@@ -37,16 +38,9 @@ st.markdown("""
         margin-bottom: 2px !important;
     }
 
-    /* 自定義緊湊分隔線 */
-    .custom-divider {
-        border-bottom: 1px solid #e0e0e0;
-        margin-top: 12px;
-        margin-bottom: 12px;
-    }
-
     /* 調整輸入框高度感 */
     [data-testid="stSidebar"] .stTextInput {
-        margin-bottom: 5px;
+        margin-bottom: 8px;
     }
     </style>
     <div class="main-title">🩺 FDA 510(k) 查詢工具</div>
@@ -155,21 +149,16 @@ def run_query(kn, k1, k2, app, lmt):
 with st.sidebar:
     st.markdown("### 搜尋參數")
     
-    # 使用 ** 觸發粗體，CSS 會攔截此加粗並套用 16px
     st.markdown("**1. 510(k) 號碼查詢**")
     k_num = st.text_input("輸入 510(k) 號碼", placeholder="例如: K231234").strip().upper()
-    
-    st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
     
     st.markdown("**2. 複合篩選條件 (可同時填寫)**")
     app_name = st.text_input("申請廠商", placeholder="例如: Medtronic")
     kw1 = st.text_input("產品主要關鍵字", placeholder="例如: Bipolar")
     kw2 = st.text_input("產品次要關鍵字", placeholder="選填")
     
-    st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
-    
     st.markdown("**抓取上限**")
     limit = st.slider("筆數", min_value=10, max_value=100, value=50, step=10, label_visibility="collapsed")
     
-    st.markdown('<div style="height: 5px;"></div>', unsafe_allow_html=True)
+    st.markdown('<div style="height: 15px;"></div>', unsafe_allow_html=True)
     submit = st.button("啟動查詢", use_container_width=True, type="primary")
