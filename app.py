@@ -97,7 +97,7 @@ def run_query(kn, k1, k2, lmt):
                 html_card = (
                     f'<div class="card" style="border-left-color: {color};">'
                     f'<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">'
-                    f'<div><span class="index-badge">{i:02d}</span><span style="font-size: 1.2em; font-weight: 800; color: #111;">510(k): {k}</span></div>'
+                    f'<div><span class="index-badge">{i:02d}</span><span style="font-size: 1.2em; font-weight: 800; color: #111;">510(k) 號碼: {k}</span></div>'
                     f'<span style="color: {color}; font-weight: bold; background: white; padding: 2px 10px; border-radius: 20px; border: 1px solid {color}; font-size: 0.85em;">{status}</span>'
                     f'</div>'
                     f'<div style="margin-bottom: 8px;"><b>判定日期：</b>{decision_date}</div>'
