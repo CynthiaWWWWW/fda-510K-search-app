@@ -14,7 +14,7 @@ st.markdown("""
     .code-label { background: #e9ecef; color: #495057; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-weight: bold; margin-right: 8px;}
     </style>
     <div class="main-title">🩺 FDA 510(k) 查詢工具</div>
-    <div class="info-text">連線 OpenFDA 資料庫檢索並驗證 PDF 文件狀態</div>
+    <div class="info-text">連線 OpenFDA 資料庫進行精確欄位篩選</div>
     """, unsafe_allow_html=True)
 
 # --- 3. 核心輔助函式 ---
@@ -33,35 +33,38 @@ def get_product_definition(p_code):
 
 # --- 4. 主查詢函式 ---
 def run_query(kn, k1, k2, app, lmt):
-    # 嚴格分開查詢欄位
+    # 如果有 510(k) 號碼，則進行號碼唯一查詢
     if kn:
-        # 模式 1: 號碼精確查詢
         q = f'k_number:"{kn}"'
-    elif app.strip():
-        # 模式 2: 廠商獨立查詢 (只查 applicant 欄位)
-        # 使用引號包裹以處理空格，並在結尾加上 * 做後模糊搜尋
-        q = f'applicant:"{app.strip()}*"'
     else:
-        # 模式 3: 產品名稱獨立查詢 (只查 device_name 欄位)
+        # 建立多條件聯集 (AND 邏輯)
         query_parts = []
-        if k1: query_parts.append(f'device_name:"{k1.strip()}*"')
-        if k2: query_parts.append(f'device_name:"{k2.strip()}*"')
+        
+        # 廠商欄位搜尋 (鎖定 applicant 欄位)
+        if app.strip():
+            query_parts.append(f'applicant:"{app.strip()}*"')
+        
+        # 產品名稱搜尋 (鎖定 device_name 欄位)
+        if k1.strip():
+            query_parts.append(f'device_name:"{k1.strip()}*"')
+        
+        if k2.strip():
+            query_parts.append(f'device_name:"{k2.strip()}*"')
+        
         q = "+AND+".join(query_parts)
 
     if not q: 
-        return st.error("請輸入 510(k) 號碼、產品關鍵字或廠商名稱")
+        return st.error("請至少輸入一個搜尋條件 (號碼、廠商或產品關鍵字)")
 
-    # OpenFDA API URL
     url = f'https://api.fda.gov/device/510k.json?search={q}&limit={lmt}'
-    
     session = requests.Session()
     session.headers.update({'User-Agent': 'Mozilla/5.0'})
 
-    with st.spinner('正在從 FDA 搜尋並驗證 PDF 連結...'):
+    with st.spinner('正在根據篩選條件檢索 FDA 資料庫...'):
         try:
             resp = session.get(url)
             if resp.status_code != 200: 
-                return st.warning("找不到相符的查詢結果，請檢查輸入內容是否正確。")
+                return st.warning("找不到相符的查詢結果，請確認廠商名稱與產品關鍵字是否匹配。")
             
             raw_data = resp.json().get('results', [])
             processed_results = []
@@ -86,10 +89,9 @@ def run_query(kn, k1, k2, app, lmt):
                 r['formatted_date'] = formatted_date
                 processed_results.append(r)
 
-            # 排序：有 PDF 的結果置頂
             processed_results.sort(key=lambda x: x['is_ok'], reverse=True)
 
-            st.success(f"搜尋完成：共 {len(processed_results)} 筆資料 (模式：{'廠商查詢' if app else '產品查詢'})")
+            st.success(f"搜尋完成：共 {len(processed_results)} 筆資料")
 
             for i, r in enumerate(processed_results, 1):
                 k = r.get('k_number', 'N/A')
@@ -127,16 +129,13 @@ def run_query(kn, k1, k2, app, lmt):
 # --- 5. 側邊欄設定 ---
 with st.sidebar:
     st.header("搜尋參數設定")
-    k_num = st.text_input("1. 按 510(k) 號碼查詢", placeholder="例如: K123456").strip().upper()
-    st.divider()
-    
-    app_name = st.text_input("2. 按 申請廠商 查詢", placeholder="只搜尋 Applicant 欄位")
-    st.caption("填寫此欄將忽略下方的產品關鍵字")
+    k_num = st.text_input("1. 按 510(k) 號碼查詢 (唯一)", placeholder="例如: K231234").strip().upper()
     
     st.divider()
-    st.write("3. 按 產品名稱 查詢")
-    kw1 = st.text_input("主要關鍵字", placeholder="例如: laser")
-    kw2 = st.text_input("次要關鍵字", placeholder="選填")
+    st.write("2. 複合篩選條件 (可同時填寫)")
+    app_name = st.text_input("申請廠商 (Applicant)", placeholder="例如: Medtronic")
+    kw1 = st.text_input("產品主要關鍵字", placeholder="例如: Bipolar")
+    kw2 = st.text_input("產品次要關鍵字", placeholder="選填")
     
     st.divider()
     limit = st.slider("抓取筆數", min_value=10, max_value=100, value=50, step=10)
