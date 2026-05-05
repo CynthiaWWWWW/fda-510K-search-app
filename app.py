@@ -12,13 +12,12 @@ st.markdown("""
     .card { border-left: 6px solid #ccc; padding: 22px; background: #ffffff; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.06); border: 1px solid #eee; }
     .idx-badge { background-color: #2c3e50; color: white; padding: 4px 12px; border-radius: 5px; font-size: 0.85em; margin-right: 15px; font-weight: 700; display: inline-block; }
     .k-num-text { font-size: 1.35em; font-weight: 800; color: #007bff; vertical-align: middle; }
-    .label { font-weight: 700; color: #444; min-width: 190px; display: inline-block; font-size: 0.95em; }
+    .label { font-weight: 700; color: #444; min-width: 210px; display: inline-block; font-size: 0.95em; }
     .value-text { color: #111; font-weight: 400; font-size: 0.95em; }
-    .pdf-btn { color: #ffffff !important; background-color: #d9534f; padding: 6px 18px; border-radius: 4px; text-decoration: none; font-size: 0.85em; font-weight: 600; transition: 0.3s; }
-    .pdf-btn:hover { background-color: #c9302c; }
+    .pdf-btn { color: #ffffff !important; background-color: #d9534f; padding: 6px 18px; border-radius: 4px; text-decoration: none; font-size: 0.85em; font-weight: 600; }
     </style>
     <div class="main-title">🩺 FDA 510(k) 專業查詢器</div>
-    <div class="info-text">精確區分 Device Name 與 Device Classification Name | 自動驗證 PDF Summary</div>
+    <div class="info-text">已互換搜尋邏輯：支援商品名與法規分類精確檢索</div>
     """, unsafe_allow_html=True)
 
 # --- 3. 側邊欄搜尋參數 ---
@@ -26,25 +25,35 @@ with st.sidebar:
     st.header("搜尋參數設定")
     k_num = st.text_input("510(k) 號碼 (例如 K232951)", "").strip().upper()
     st.divider()
-    kw1 = st.text_input("產品關鍵字", "Endoscope")
-    kw2 = st.text_input("廠商關鍵字", "")
+    # 這裡的搜尋對象已在後台互換
+    kw_prod = st.text_input("產品名稱 (Device Name)", "") 
+    kw_class = st.text_input("分類名稱 (Classification)", "Endoscope") 
     limit = st.slider("顯示筆數", 5, 50, 10)
     submit = st.button("啟動查詢", use_container_width=True, type="primary")
 
 # --- 4. 核心搜尋函式 ---
-def run_query(kn, k1, k2, lmt):
-    # 建立 API 查詢字串
-    q = f'k_number:"{kn}"' if kn else "+AND+".join([f'device_name:{k}*' for k in [k1, k2] if k])
+def run_query(kn, kp, kc, lmt):
+    # 建立 API 查詢字串：互換搜尋欄位
+    # kp (產品名稱) 搜尋 proprietary_name
+    # kc (分類名稱) 搜尋 device_name
+    if kn:
+        q = f'k_number:"{kn}"'
+    else:
+        query_parts = []
+        if kp: query_parts.append(f'proprietary_name:"{kp}"')
+        if kc: query_parts.append(f'device_name:"{kc}"')
+        q = "+AND+".join(query_parts)
+
     if not q: return st.error("請輸入號碼或關鍵字")
 
     url = f'https://api.fda.gov/device/510k.json?search={q}&limit={lmt}'
     session = requests.Session()
     session.headers.update({'User-Agent': 'Mozilla/5.0'})
 
-    with st.spinner('正在分析 FDA 數據並核對 PDF 狀態...'):
+    with st.spinner('🔍 正在檢索 FDA 數據並核對 PDF 狀態...'):
         try:
             resp = session.get(url)
-            if resp.status_code != 200: return st.warning("找不到相符的結果")
+            if resp.status_code != 200: return st.warning("找不到相符的結果，請嘗試減少關鍵字或檢查拼字。")
             
             raw_data = resp.json().get('results', [])
             processed_results = []
@@ -52,14 +61,13 @@ def run_query(kn, k1, k2, lmt):
             for r in raw_data:
                 k = r.get('k_number', 'N/A')
                 pdf_url = f"https://www.accessdata.fda.gov/cdrh_docs/pdf{k[1:3]}/{k}.pdf"
-                # 驗證 PDF 是否存在
                 is_ok = session.head(pdf_url, timeout=3).status_code == 200
                 
                 processed_results.append({
                     "k_num": k,
-                    "device_name": r.get('proprietary_name', '未標示'),     # 商品名
-                    "class_name": r.get('device_name', '未知分類'),        # 分類名
-                    "prod_code": r.get('product_code', 'N/A'),             # 產品代碼
+                    "class_name": r.get('device_name', '未知分類'),        # 分類名稱 (Endoscope Channel Accessory)
+                    "device_name": r.get('proprietary_name', '未標示'),     # 產品名稱 (BioShield Biopsy Valve)
+                    "prod_code": r.get('product_code', 'N/A'),
                     "applicant": r.get('applicant', '未知'),
                     "is_ok": is_ok,
                     "pdf_url": pdf_url
@@ -76,7 +84,7 @@ def run_query(kn, k1, k2, lmt):
                 
                 pdf_btn = f'<a href="{item["pdf_url"]}" target="_blank" class="pdf-btn">📄 下載 PDF</a>' if item['is_ok'] else ""
 
-                # 結構化 HTML
+                # 結構化 HTML：互換顯示順序，分類名稱置頂
                 html_card = (
                     f'<div class="card" style="border-left-color: {color};">'
                     f'<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">'
@@ -86,8 +94,8 @@ def run_query(kn, k1, k2, lmt):
                     f'</div>'
                     f'<span style="color: {color}; font-weight: bold; background: #fff; padding: 4px 12px; border-radius: 20px; border: 1px solid {color}; font-size: 0.85em;">{status}</span>'
                     f'</div>'
-                    f'<div style="margin-bottom: 10px;"><span class="label">Device Name:</span><span class="value-text">{item["device_name"]}</span></div>'
-                    f'<div style="margin-bottom: 10px;"><span class="label">Device Classification Name:</span><span class="value-text">{item["class_name"]}</span></div>'
+                    f'<div style="margin-bottom: 10px;"><span class="label">Device Classification Name:</span><span class="value-text" style="color: #000; font-weight: 700;">{item["class_name"]}</span></div>'
+                    f'<div style="margin-bottom: 10px;"><span class="label">Device Name (Proprietary):</span><span class="value-text">{item["device_name"]}</span></div>'
                     f'<div style="margin-bottom: 10px;"><span class="label">Product Code:</span><span class="value-text" style="color: #d9534f; font-weight: 700;">{item["prod_code"]}</span></div>'
                     f'<div style="margin-bottom: 22px;"><span class="label">Applicant:</span><span class="value-text">{item["applicant"]}</span></div>'
                     f'<div style="display: flex; gap: 25px; align-items: center; border-top: 1px solid #eee; padding-top: 18px;">'
@@ -104,4 +112,4 @@ def run_query(kn, k1, k2, lmt):
 
 # --- 5. 執行查詢 ---
 if submit:
-    run_query(k_num, kw1, kw2, limit)
+    run_query(k_num, kw_prod, kw_class, limit)
