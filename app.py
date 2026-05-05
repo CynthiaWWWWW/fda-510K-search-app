@@ -51,54 +51,45 @@ def get_product_definition(p_code):
 
 # --- 4. 主查詢函式 ---
 def run_query(kn, k1, k2, app, lmt):
-    # 建立多條件聯集 (核心修正：確保過濾空字串)
     query_parts = []
     
     if kn.strip():
-        # 如果有號碼，優先精確查詢
+        # 號碼查詢仍建議使用雙引號以確保精確
         query_parts.append(f'k_number:"{kn.strip()}"')
     else:
-        # 否則組合各個欄位
+        # 移除雙引號，確保 * 號發揮後模糊搜尋作用
         if app.strip():
-            query_parts.append(f'applicant:"{app.strip()}*"')
+            query_parts.append(f'applicant:{app.strip()}*')
         if k1.strip():
-            query_parts.append(f'device_name:"{k1.strip()}*"')
+            query_parts.append(f'device_name:{k1.strip()}*')
         if k2.strip():
-            query_parts.append(f'device_name:"{k2.strip()}*"')
+            query_parts.append(f'device_name:{k2.strip()}*')
 
-    # 組合最終查詢字串
     q = "+AND+".join(query_parts)
 
     if not q: 
-        return st.warning("請至少輸入一個搜尋條件 (號碼、廠商或產品關鍵字)")
+        return st.warning("請至少輸入一個搜尋條件")
 
     url = f'https://api.fda.gov/device/510k.json?search={q}&limit={lmt}'
-    
     session = requests.Session()
-    session.headers.update({'User-Agent': 'Mozilla/5.0'})
 
     with st.spinner('連線 FDA 資料庫檢索中...'):
         try:
             resp = session.get(url, timeout=10)
-            if resp.status_code == 404:
-                return st.warning("找不到相符的查詢結果，請嘗試簡化關鍵字。")
             if resp.status_code != 200:
-                return st.error(f"FDA 伺服器回傳錯誤 (代碼: {resp.status_code})")
+                return st.warning("找不到相符結果，請檢查拼字。")
             
             data = resp.json()
             raw_results = data.get('results', [])
-            
-            if not raw_results:
-                return st.warning("找不到相符結果。")
-
             processed_results = []
+
             for r in raw_results:
                 k = r.get('k_number', 'N/A')
                 pdf = f"https://www.accessdata.fda.gov/cdrh_docs/pdf{k[1:3]}/{k}.pdf"
                 
-                # 快速驗證 PDF (選配，若太慢可移除)
+                # 簡單驗證 PDF
                 try:
-                    is_ok = session.head(pdf, timeout=2).status_code == 200
+                    is_ok = session.head(pdf, timeout=1.5).status_code == 200
                 except:
                     is_ok = False
                 
@@ -113,7 +104,6 @@ def run_query(kn, k1, k2, app, lmt):
                 r['formatted_date'] = formatted_date
                 processed_results.append(r)
 
-            # 排序
             processed_results.sort(key=lambda x: x['is_ok'], reverse=True)
             st.success(f"搜尋完成：共 {len(processed_results)} 筆資料")
 
@@ -142,25 +132,20 @@ def run_query(kn, k1, k2, app, lmt):
                     f'</div>'
                 )
                 st.markdown(html_card, unsafe_allow_html=True)
-
-        except requests.exceptions.RequestException as e:
-            st.error(f"連線 FDA 失敗，請檢查網路。")
+        except:
+            st.error("連線錯誤")
 
 # --- 5. 側邊欄設定 ---
 with st.sidebar:
     st.markdown("### 搜尋參數設定")
-    
     st.markdown("1. 510(k) 號碼查詢")
     k_num = st.text_input("輸入 510(k) 號碼", placeholder="例如: K231234").strip().upper()
-    
     st.markdown("2. 複合篩選條件 (可同時填寫)")
     app_name = st.text_input("申請廠商", placeholder="例如: Medtronic")
     kw1 = st.text_input("產品主要關鍵字", placeholder="例如: Laser")
     kw2 = st.text_input("產品次要關鍵字", placeholder="選填")
-    
     st.markdown("抓取上限")
     limit = st.slider("筆數", min_value=10, max_value=100, value=50, step=10, label_visibility="collapsed")
-    
     st.markdown('<div style="height: 10px;"></div>', unsafe_allow_html=True)
     submit = st.button("查詢", use_container_width=True, type="primary")
 
