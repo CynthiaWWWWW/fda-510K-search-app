@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 
 # --- 1. 網頁基本設定 ---
-st.set_page_config(page_title="FDA 510(k) Search", page_icon="🩺", layout="wide")
+st.set_page_config(page_title="FDA 510(k) 查詢器", page_icon="🩺", layout="wide")
 
 # --- 2. CSS 樣式 ---
 st.markdown("""
@@ -11,10 +11,10 @@ st.markdown("""
     .info-text { font-size: 16px; color: #666; text-align: center; margin-bottom: 20px; }
     .card { border-left: 6px solid #ccc; padding: 16px; background: #f8f9fa; border-radius: 10px; margin-bottom: 15px; box-shadow: 2px 2px 5px rgba(0,0,0,0.05); }
     .index-badge { background: #4a4a4a; color: #ffffff; padding: 4px 10px; border-radius: 6px; font-size: 0.9em; font-weight: bold; margin-right: 12px; letter-spacing: 1px;}
-    .code-label { background: #e9ecef; color: #495057; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-weight: bold;}
+    .code-label { background: #e9ecef; color: #495057; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-weight: bold; margin-right: 8px;}
     </style>
-    <div class="main-title">🩺 FDA 510(k) Search Tool</div>
-    <div class="info-text">Retrieve data from OpenFDA API with automatic PDF validation</div>
+    <div class="main-title">🩺 FDA 510(k) 查詢工具</div>
+    <div class="info-text">連線 OpenFDA 資料庫檢索並驗證 PDF 文件狀態</div>
     """, unsafe_allow_html=True)
 
 # --- 3. 核心輔助函式 ---
@@ -37,17 +37,18 @@ def get_product_definition(p_code):
 
 # --- 4. 主查詢函式 ---
 def run_query(kn, k1, k2, lmt):
+    # 建立搜尋字串
     q = f'k_number:"{kn}"' if kn else "+AND+".join([f'device_name:{k}*' for k in [k1, k2] if k])
-    if not q: return st.error("Please enter a K-number or keywords")
+    if not q: return st.error("請輸入 510(k) 號碼或產品關鍵字")
 
     url = f'https://api.fda.gov/device/510k.json?search={q}&limit={lmt}'
     session = requests.Session()
     session.headers.update({'User-Agent': 'Mozilla/5.0'})
 
-    with st.spinner('Searching FDA database and validating PDFs...'):
+    with st.spinner('正在從 FDA 搜尋並驗證 PDF 連結...'):
         try:
             resp = session.get(url)
-            if resp.status_code != 200: return st.warning("No matching results found")
+            if resp.status_code != 200: return st.warning("找不到相符的查詢結果")
             
             raw_data = resp.json().get('results', [])
             processed_results = []
@@ -55,10 +56,10 @@ def run_query(kn, k1, k2, lmt):
             for r in raw_data:
                 k = r.get('k_number')
                 pdf = f"https://www.accessdata.fda.gov/cdrh_docs/pdf{k[1:3]}/{k}.pdf"
-                # 驗證 PDF 連結是否存在
+                # 驗證 PDF 連結有效性
                 is_ok = session.head(pdf, timeout=2).status_code == 200
                 
-                # 取得產品代碼的英文詳情
+                # 取得產品代碼對應的分類名稱
                 p_code = r.get('product_code', '')
                 eng_def = get_product_definition(p_code)
                 
@@ -67,10 +68,10 @@ def run_query(kn, k1, k2, lmt):
                 r['product_desc'] = eng_def
                 processed_results.append(r)
 
-            # 排序：將有 PDF 的結果置頂
+            # 排序：有 PDF 的結果置頂
             processed_results.sort(key=lambda x: x['is_ok'], reverse=True)
 
-            st.success(f"Found {len(processed_results)} records (PDF-available results moved to top)")
+            st.success(f"搜尋完成：共 {len(processed_results)} 筆資料 (已將可下載 PDF 之結果置頂)")
 
             for i, r in enumerate(processed_results, 1):
                 k = r.get('k_number')
@@ -80,21 +81,21 @@ def run_query(kn, k1, k2, lmt):
                 p_desc = r['product_desc']
                 
                 color = "#28a745" if is_ok else "#ffc107"
-                status = "✅ PDF Ready" if is_ok else "⚠️ No Summary"
-                pdf_link = f'<a href="{pdf}" target="_blank" style="color: #d9534f; text-decoration: none; font-weight: 600;">📄 Download PDF</a>' if is_ok else ""
+                status = "✅ PDF 已就緒" if is_ok else "⚠️ 無 Summary"
+                pdf_link = f'<a href="{pdf}" target="_blank" style="color: #d9534f; text-decoration: none; font-weight: 600;">📄 下載 PDF</a>' if is_ok else ""
 
+                # 欄位內容：合併 Product Code 與 Classification
                 html_card = (
                     f'<div class="card" style="border-left-color: {color};">'
                     f'<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">'
                     f'<div><span class="index-badge">{i:02d}</span><span style="font-size: 1.2em; font-weight: 800; color: #111;">510(k): {k}</span></div>'
                     f'<span style="color: {color}; font-weight: bold; background: white; padding: 2px 10px; border-radius: 20px; border: 1px solid {color}; font-size: 0.85em;">{status}</span>'
                     f'</div>'
-                    f'<div style="margin-bottom: 8px;"><b>Product Code:</b> <span class="code-label">{p_code}</span></div>'
-                    f'<div style="margin-bottom: 8px;"><b>Classification:</b> <span style="color: #495057;">{p_desc}</span></div>'
-                    f'<div style="margin-bottom: 8px;"><b>Device Name:</b> {r.get("device_name", "Unknown")}</div>'
-                    f'<div style="margin-bottom: 12px;"><b>Applicant:</b> {r.get("applicant", "Unknown")}</div>'
+                    f'<div style="margin-bottom: 8px;"><b>產品代碼與分類：</b><span class="code-label">{p_code}</span> <span style="color: #555;">{p_desc}</span></div>'
+                    f'<div style="margin-bottom: 8px;"><b>設備名稱：</b>{r.get("device_name", "Unknown")}</div>'
+                    f'<div style="margin-bottom: 12px;"><b>申請廠商：</b>{r.get("applicant", "Unknown")}</div>'
                     f'<div style="display: flex; gap: 15px;">'
-                    f'<a href="https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfPMN/pmn.cfm?ID={k}" target="_blank" style="color: #007bff; text-decoration: none; font-weight: 600;">🌐 Official Info</a>'
+                    f'<a href="https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfPMN/pmn.cfm?ID={k}" target="_blank" style="color: #007bff; text-decoration: none; font-weight: 600;">🌐 官方資訊</a>'
                     f'{pdf_link}'
                     f'</div>'
                     f'</div>'
@@ -102,17 +103,17 @@ def run_query(kn, k1, k2, lmt):
                 st.markdown(html_card, unsafe_allow_html=True)
 
         except Exception as e:
-            st.error(f"An error occurred: {e}")
+            st.error(f"連線發生錯誤：{e}")
 
-# --- 5. 側邊欄 ---
+# --- 5. 側邊欄設定 ---
 with st.sidebar:
-    st.header("Search Parameters")
-    k_num = st.text_input("510(k) Number (e.g., K231234)", "").strip().upper()
+    st.header("搜尋參數設定")
+    k_num = st.text_input("510(k) 號碼 (例如 K231234)", "").strip().upper()
     st.divider()
-    kw1 = st.text_input("Primary Keyword", "Laser")
-    kw2 = st.text_input("Secondary Keyword", "")
-    limit = st.slider("Result Limit", 5, 50, 10)
-    submit = st.button("Search", use_container_width=True, type="primary")
+    kw1 = st.text_input("主關鍵字 (Device Name)", "Laser")
+    kw2 = st.text_input("次要關鍵字", "")
+    limit = st.slider("抓取筆數", 5, 50, 10)
+    submit = st.button("啟動查詢", use_container_width=True, type="primary")
 
 if submit:
     run_query(k_num, kw1, kw2, limit)
