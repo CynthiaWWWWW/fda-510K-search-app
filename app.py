@@ -35,33 +35,30 @@ def get_product_definition(p_code):
 def run_query(kn, k1, k2, app, lmt):
     # 邏輯變更：判斷搜尋模式
     if kn:
-        # 模式 A: 指定號碼查詢
+        # 1. 如果有 510(k) 號碼，以此為準
         q = f'k_number:"{kn}"'
-        mode_msg = f"正在查詢 510(k) 號碼: {kn}"
     elif app:
-        # 模式 B: 指定廠商查詢 (忽略產品關鍵字)
+        # 2. 如果有申請廠商，只搜尋廠商（忽略關鍵字）
         q = f'applicant:{app.strip()}*'
-        mode_msg = f"正在查詢廠商: {app} (已自動忽略產品關鍵字)"
     else:
-        # 模式 C: 產品關鍵字搜尋
+        # 3. 都沒填號碼與廠商，則使用產品關鍵字
         query_parts = []
         if k1: query_parts.append(f'device_name:{k1.strip()}*')
         if k2: query_parts.append(f'device_name:{k2.strip()}*')
         q = "+AND+".join(query_parts)
-        mode_msg = "正在根據產品關鍵字搜尋"
 
     if not q: 
-        return st.error("請輸入 510(k) 號碼、申請廠商或產品關鍵字")
+        return st.error("請輸入 510(k) 號碼、產品關鍵字或廠商名稱")
 
     url = f'https://api.fda.gov/device/510k.json?search={q}&limit={lmt}'
     session = requests.Session()
     session.headers.update({'User-Agent': 'Mozilla/5.0'})
 
-    with st.spinner(f'{mode_msg}...'):
+    with st.spinner('正在從 FDA 搜尋並驗證 PDF 連結...'):
         try:
             resp = session.get(url)
             if resp.status_code != 200: 
-                return st.warning("找不到相符的查詢結果，請嘗試縮簡關鍵字。")
+                return st.warning("找不到相符的查詢結果，請檢查關鍵字拼字或縮減條件。")
             
             raw_data = resp.json().get('results', [])
             processed_results = []
@@ -88,7 +85,7 @@ def run_query(kn, k1, k2, app, lmt):
 
             processed_results.sort(key=lambda x: x['is_ok'], reverse=True)
 
-            st.success(f"搜尋完成：共 {len(processed_results)} 筆資料")
+            st.success(f"搜尋完成：共 {len(processed_results)} 筆資料 (已自動套用後模糊搜尋)")
 
             for i, r in enumerate(processed_results, 1):
                 k = r.get('k_number', 'N/A')
@@ -126,11 +123,11 @@ def run_query(kn, k1, k2, app, lmt):
 # --- 5. 側邊欄設定 ---
 with st.sidebar:
     st.header("搜尋參數設定")
-    k_num = st.text_input("510(k) 號碼", placeholder="優先權最高").strip().upper()
-    
+    k_num = st.text_input("510(k) 號碼", placeholder="例如: K123456").strip().upper()
     st.divider()
-    # 將廠商名稱放在關鍵字上方，強調優先級
-    app_name = st.text_input("申請廠商 (Applicant)", placeholder="輸入廠商則忽略關鍵字")
+    
+    # 提醒使用者：填寫此欄會忽略產品關鍵字
+    app_name = st.text_input("申請廠商 (Applicant)", placeholder="輸入則優先搜尋廠商")
     
     st.divider()
     kw1 = st.text_input("主要關鍵字 (Device Name)", placeholder="例如: bipolar")
