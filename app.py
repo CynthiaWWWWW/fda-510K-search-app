@@ -7,7 +7,7 @@ st.set_page_config(page_title="FDA 510(k) 查詢器", page_icon="🩺", layout="
 # --- 2. CSS 樣式 ---
 st.markdown("""
     <style>
-    .main-title { font-size: 24px; font-weight: 800; color: #1E1E1E; text-align: center; margin-bottom: 10px; }
+    .main-title { font-size: 26px; font-weight: 800; color: #1E1E1E; text-align: center; margin-bottom: 10px; }
     .info-text { font-size: 14px; color: #666; text-align: center; margin-bottom: 20px; }
     .card { border-left: 6px solid #ccc; padding: 16px; background: #f8f9fa; border-radius: 10px; margin-bottom: 15px; box-shadow: 2px 2px 5px rgba(0,0,0,0.05); }
     .index-badge { background: #4a4a4a; color: #ffffff; padding: 4px 10px; border-radius: 6px; font-size: 0.9em; font-weight: bold; margin-right: 12px; letter-spacing: 1px;}
