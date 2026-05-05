@@ -85,4 +85,34 @@ def run_query(kn, k1, k2, lmt):
 
                 html_card = (
                     f'<div class="card" style="border-left-color: {color};">'
-                    f'<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    f'<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">'
+                    f'<div><span class="index-badge">{i:02d}</span><span style="font-size: 1.2em; font-weight: 800; color: #111;">510(k): {k}</span></div>'
+                    f'<span style="color: {color}; font-weight: bold; background: white; padding: 2px 10px; border-radius: 20px; border: 1px solid {color}; font-size: 0.85em;">{status}</span>'
+                    f'</div>'
+                    f'<div style="margin-bottom: 8px;"><b>Product Code:</b> <span class="code-label">{p_code}</span></div>'
+                    f'<div style="margin-bottom: 8px;"><b>Classification:</b> <span style="color: #495057;">{p_desc}</span></div>'
+                    f'<div style="margin-bottom: 8px;"><b>Device Name:</b> {r.get("device_name", "Unknown")}</div>'
+                    f'<div style="margin-bottom: 12px;"><b>Applicant:</b> {r.get("applicant", "Unknown")}</div>'
+                    f'<div style="display: flex; gap: 15px;">'
+                    f'<a href="https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfPMN/pmn.cfm?ID={k}" target="_blank" style="color: #007bff; text-decoration: none; font-weight: 600;">🌐 Official Info</a>'
+                    f'{pdf_link}'
+                    f'</div>'
+                    f'</div>'
+                )
+                st.markdown(html_card, unsafe_allow_html=True)
+
+        except Exception as e:
+            st.error(f"An error occurred: {e}")
+
+# --- 5. 側邊欄 ---
+with st.sidebar:
+    st.header("Search Parameters")
+    k_num = st.text_input("510(k) Number (e.g., K231234)", "").strip().upper()
+    st.divider()
+    kw1 = st.text_input("Primary Keyword", "Laser")
+    kw2 = st.text_input("Secondary Keyword", "")
+    limit = st.slider("Result Limit", 5, 50, 10)
+    submit = st.button("Search", use_container_width=True, type="primary")
+
+if submit:
+    run_query(k_num, kw1, kw2, limit)
