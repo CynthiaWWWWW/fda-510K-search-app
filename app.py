@@ -1,5 +1,5 @@
-import streamlit as st  # 匯入 Streamlit 網頁框架套件
-import requests  # 匯入 Requests 套件用於發送網路請求
+import streamlit as st
+import requests
 
 # --- 1. 網頁基本設定 ---
 st.set_page_config(page_title="FDA 510(k) 查詢", page_icon="🩺", layout="wide")
@@ -34,38 +34,58 @@ def run_query(kn, k1, k2, lmt):
     session = requests.Session()
     session.headers.update({'User-Agent': 'Mozilla/5.0'})
 
-    with st.spinner('正在從 FDA 搜尋並驗證 PDF 連結...'):
+    with st.spinner('正在從 FDA 搜尋、驗證 PDF 並排序中...'):
         try:
             resp = session.get(url)
             if resp.status_code != 200: return st.warning("找不到相符的結果")
             
-            data = resp.json().get('results', [])
-            st.success(f"找到 {len(data)} 筆資料")
+            raw_data = resp.json().get('results', [])
+            processed_results = []
 
-            for i, r in enumerate(data, 1):
+            # 第一步：預處理資料並驗證 PDF (為了後續排序)
+            for r in raw_data:
                 k = r.get('k_number')
                 pdf = f"https://www.accessdata.fda.gov/cdrh_docs/pdf{k[1:3]}/{k}.pdf"
-                
-                # 驗證連結
+                # 驗證連結有效性
                 is_ok = session.head(pdf, timeout=3).status_code == 200
+                
+                r['is_ok'] = is_ok
+                r['pdf_url'] = pdf
+                processed_results.append(r)
+
+            # 第二步：根據 PDF 是否存在進行排序 (True 的排前面)
+            processed_results.sort(key=lambda x: x['is_ok'], reverse=True)
+
+            st.success(f"找到 {len(processed_results)} 筆資料 (已將有 PDF 的結果置頂)")
+
+            # 第三步：渲染結果
+            for i, r in enumerate(processed_results, 1):
+                k = r.get('k_number')
+                pdf = r['pdf_url']
+                is_ok = r['is_ok']
+                
                 color = "#28a745" if is_ok else "#ffc107"
                 status = "✅ PDF 已就緒" if is_ok else "⚠️ 無 Summary 文件"
+                
+                # PDF 按鈕 HTML (分開寫以避免字串內部的邏輯干擾渲染)
+                pdf_link = f'<a href="{pdf}" target="_blank" style="color: #d9534f; text-decoration: none; font-weight: 600;">📄 下載 PDF</a>' if is_ok else ""
 
-                # 重點修正：移除 HTML 字串內部的縮排，確保靠左對齊
-                html_card = f"""
-<div class="card" style="border-left-color: {color};">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-        <span style="font-size: 1.2em; font-weight: 800; color: #111;">#{i} 510(k): {k}</span>
-        <span style="color: {color}; font-weight: bold; background: white; padding: 2px 10px; border-radius: 20px; border: 1px solid {color}; font-size: 0.85em;">{status}</span>
-    </div>
-    <div style="margin-bottom: 8px;"><b>產品設備：</b>{r.get('device_name', '未知')}</div>
-    <div style="margin-bottom: 12px;"><b>申請廠商：</b>{r.get('applicant', '未知')}</div>
-    <div style="display: flex; gap: 15px;">
-        <a href="https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfPMN/pmn.cfm?ID={k}" target="_blank" style="color: #007bff; text-decoration: none; font-weight: 600;">🌐 官網資訊</a>
-        {f'<a href="{pdf}" target="_blank" style="color: #d9534f; text-decoration: none; font-weight: 600;">📄 下載 PDF</a>' if is_ok else ""}
-    </div>
-</div>
-"""
+                # 極致扁平化 HTML 字串，防止 Markdown 解析出錯
+                html_card = (
+                    f'<div class="card" style="border-left-color: {color};">'
+                    f'<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">'
+                    f'<span style="font-size: 1.2em; font-weight: 800; color: #111;">#{i} 510(k): {k}</span>'
+                    f'<span style="color: {color}; font-weight: bold; background: white; padding: 2px 10px; border-radius: 20px; border: 1px solid {color}; font-size: 0.85em;">{status}</span>'
+                    f'</div>'
+                    f'<div style="margin-bottom: 8px;"><b>產品設備：</b>{r.get("device_name", "未知")}</div>'
+                    f'<div style="margin-bottom: 12px;"><b>申請廠商：</b>{r.get("applicant", "未知")}</div>'
+                    f'<div style="display: flex; gap: 15px;">'
+                    f'<a href="https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfPMN/pmn.cfm?ID={k}" target="_blank" style="color: #007bff; text-decoration: none; font-weight: 600;">🌐 官網資訊</a>'
+                    f'{pdf_link}'
+                    f'</div>'
+                    f'</div>'
+                )
+                
                 st.markdown(html_card, unsafe_allow_html=True)
 
         except Exception as e:
