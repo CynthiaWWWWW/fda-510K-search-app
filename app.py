@@ -33,24 +33,27 @@ def get_product_definition(p_code):
 
 # --- 4. 主查詢函式 ---
 def run_query(kn, k1, k2, app, lmt):
-    # 邏輯變更：判斷搜尋模式
+    # 嚴格分開查詢欄位
     if kn:
-        # 1. 如果有 510(k) 號碼，以此為準
+        # 模式 1: 號碼精確查詢
         q = f'k_number:"{kn}"'
-    elif app:
-        # 2. 如果有申請廠商，只搜尋廠商（忽略關鍵字）
-        q = f'applicant:{app.strip()}*'
+    elif app.strip():
+        # 模式 2: 廠商獨立查詢 (只查 applicant 欄位)
+        # 使用引號包裹以處理空格，並在結尾加上 * 做後模糊搜尋
+        q = f'applicant:"{app.strip()}*"'
     else:
-        # 3. 都沒填號碼與廠商，則使用產品關鍵字
+        # 模式 3: 產品名稱獨立查詢 (只查 device_name 欄位)
         query_parts = []
-        if k1: query_parts.append(f'device_name:{k1.strip()}*')
-        if k2: query_parts.append(f'device_name:{k2.strip()}*')
+        if k1: query_parts.append(f'device_name:"{k1.strip()}*"')
+        if k2: query_parts.append(f'device_name:"{k2.strip()}*"')
         q = "+AND+".join(query_parts)
 
     if not q: 
         return st.error("請輸入 510(k) 號碼、產品關鍵字或廠商名稱")
 
+    # OpenFDA API URL
     url = f'https://api.fda.gov/device/510k.json?search={q}&limit={lmt}'
+    
     session = requests.Session()
     session.headers.update({'User-Agent': 'Mozilla/5.0'})
 
@@ -58,7 +61,7 @@ def run_query(kn, k1, k2, app, lmt):
         try:
             resp = session.get(url)
             if resp.status_code != 200: 
-                return st.warning("找不到相符的查詢結果，請檢查關鍵字拼字或縮減條件。")
+                return st.warning("找不到相符的查詢結果，請檢查輸入內容是否正確。")
             
             raw_data = resp.json().get('results', [])
             processed_results = []
@@ -83,9 +86,10 @@ def run_query(kn, k1, k2, app, lmt):
                 r['formatted_date'] = formatted_date
                 processed_results.append(r)
 
+            # 排序：有 PDF 的結果置頂
             processed_results.sort(key=lambda x: x['is_ok'], reverse=True)
 
-            st.success(f"搜尋完成：共 {len(processed_results)} 筆資料 (已自動套用後模糊搜尋)")
+            st.success(f"搜尋完成：共 {len(processed_results)} 筆資料 (模式：{'廠商查詢' if app else '產品查詢'})")
 
             for i, r in enumerate(processed_results, 1):
                 k = r.get('k_number', 'N/A')
@@ -123,16 +127,18 @@ def run_query(kn, k1, k2, app, lmt):
 # --- 5. 側邊欄設定 ---
 with st.sidebar:
     st.header("搜尋參數設定")
-    k_num = st.text_input("510(k) 號碼", placeholder="例如: K123456").strip().upper()
+    k_num = st.text_input("1. 按 510(k) 號碼查詢", placeholder="例如: K123456").strip().upper()
     st.divider()
     
-    # 提醒使用者：填寫此欄會忽略產品關鍵字
-    app_name = st.text_input("申請廠商 (Applicant)", placeholder="輸入則優先搜尋廠商")
+    app_name = st.text_input("2. 按 申請廠商 查詢", placeholder="只搜尋 Applicant 欄位")
+    st.caption("填寫此欄將忽略下方的產品關鍵字")
     
     st.divider()
-    kw1 = st.text_input("主要關鍵字 (Device Name)", placeholder="例如: bipolar")
-    kw2 = st.text_input("次要關鍵字", "")
+    st.write("3. 按 產品名稱 查詢")
+    kw1 = st.text_input("主要關鍵字", placeholder="例如: laser")
+    kw2 = st.text_input("次要關鍵字", placeholder="選填")
     
+    st.divider()
     limit = st.slider("抓取筆數", min_value=10, max_value=100, value=50, step=10)
     submit = st.button("啟動查詢", use_container_width=True, type="primary")
 
