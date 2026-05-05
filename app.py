@@ -16,16 +16,16 @@ st.markdown("""
 
     /* --- 側邊欄精修排版 --- */
     
-    /* 1. 標題類：1. & 2. 項 (粗體 16px) */
-    [data-testid="stSidebar"] .stMarkdown p strong {
+    /* 1. 標題類：1. & 2. 項 (取消粗體，維持 16px) */
+    [data-testid="stSidebar"] .stMarkdown p {
         font-size: 16px !important;
-        font-weight: 800 !important;
+        font-weight: 400 !important; /* 取消粗體 */
         display: block;
         margin-top: 8px !important;
         margin-bottom: 2px !important;
     }
 
-    /* 2. 欄位標籤類：申請廠商、關鍵字等 (非粗體 14px) */
+    /* 2. 欄位標籤類：申請廠商、關鍵字等 (14px，取消粗體) */
     [data-testid="stSidebar"] .stWidgetLabel p {
         font-size: 14px !important;
         font-weight: 400 !important;
@@ -48,10 +48,10 @@ st.markdown("""
         margin-top: 10px !important;
     }
 
-    /* 按鈕文字大小調整 */
+    /* 按鈕字體調整 (維持較清晰的粗細以利辨識) */
     [data-testid="stSidebar"] .stButton button p {
         font-size: 16px !important;
-        font-weight: 600 !important;
+        font-weight: 400 !important;
     }
     </style>
     <div class="main-title">🩺 FDA 510(k) 查詢工具</div>
@@ -160,17 +160,17 @@ def run_query(kn, k1, k2, app, lmt):
 with st.sidebar:
     st.markdown("### 搜尋參數設定")
     
-    st.markdown("**1. 510(k) 號碼查詢**")
+    # 移除 Markdown 中的 ** 符號以確保不加粗
+    st.markdown("1. 510(k) 號碼查詢")
     k_num = st.text_input("輸入 510(k) 號碼", placeholder="例如: K231234").strip().upper()
     
-    st.markdown("**2. 複合篩選條件 (可同時填寫)**")
+    st.markdown("2. 複合篩選條件 (可同時填寫)")
     app_name = st.text_input("申請廠商", placeholder="例如: Medtronic")
     kw1 = st.text_input("產品主要關鍵字", placeholder="例如: Bipolar")
     kw2 = st.text_input("產品次要關鍵字", placeholder="選填")
     
-    st.markdown("**抓取上限**")
+    st.markdown("抓取上限")
     limit = st.slider("筆數", min_value=10, max_value=100, value=50, step=10, label_visibility="collapsed")
     
     st.markdown('<div style="height: 10px;"></div>', unsafe_allow_html=True)
-    # 按鈕文字已改為「查詢」
     submit = st.button("查詢", use_container_width=True, type="primary")
