@@ -129,11 +129,11 @@ def run_query(kn, k1, k2, app, lmt):
 # --- 5. 側邊欄設定 ---
 with st.sidebar:
     st.header("搜尋參數設定")
-    k_num = st.text_input("1. 按 510(k) 號碼查詢 (唯一)", placeholder="例如: K231234").strip().upper()
+    k_num = st.text_input("1. 510(k) 號碼查詢", placeholder="例如: K231234").strip().upper()
     
     st.divider()
     st.write("2. 複合篩選條件 (可同時填寫)")
-    app_name = st.text_input("申請廠商 (Applicant)", placeholder="例如: Medtronic")
+    app_name = st.text_input("申請廠商", placeholder="例如: Medtronic")
     kw1 = st.text_input("產品主要關鍵字", placeholder="例如: Bipolar")
     kw2 = st.text_input("產品次要關鍵字", placeholder="選填")
     
