@@ -157,7 +157,7 @@ with st.sidebar:
     kw1 = st.text_input("產品主要關鍵字", placeholder="例如: Bipolar")
     kw2 = st.text_input("產品次要關鍵字", placeholder="選填")
     
-    st.markdown("**抓取上限**")
+    st.markdown("**查詢筆數**")
     limit = st.slider("筆數", min_value=10, max_value=100, value=50, step=10, label_visibility="collapsed")
     
     st.markdown('<div style="height: 15px;"></div>', unsafe_allow_html=True)
