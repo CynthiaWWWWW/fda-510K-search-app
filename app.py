@@ -1,5 +1,7 @@
 import streamlit as st
 import requests
+import pandas as pd
+import io
 
 # --- 1. 網頁基本設定 ---
 st.set_page_config(page_title="FDA 510(k) 查詢器", page_icon="🩺", layout="wide")
@@ -79,8 +81,41 @@ def run_query(kn, k1, k2, lmt):
             # 排序：有 PDF 的結果置頂
             processed_results.sort(key=lambda x: x['is_ok'], reverse=True)
 
-            st.success(f"搜尋完成：共 {len(processed_results)} 筆資料 (已將可下載 PDF 之結果置頂)")
+            # --- Excel 匯出邏輯 ---
+            excel_data = []
+            for r in processed_results:
+                excel_data.append({
+                    "510(k) 號碼": r.get('k_number'),
+                    "判定日期": r['formatted_date'],
+                    "產品代碼": r.get('product_code'),
+                    "產品分類名稱": r['product_desc'],
+                    "設備名稱": r.get('device_name'),
+                    "申請廠商": r.get('applicant'),
+                    "PDF 狀態": "可下載" if r['is_ok'] else "無文件",
+                    "PDF 連結": r['pdf_url'],
+                    "官方資訊連結": f"https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfPMN/pmn.cfm?ID={r.get('k_number')}"
+                })
+            
+            df = pd.DataFrame(excel_data)
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                df.to_excel(writer, index=False, sheet_name='FDA_510k_Results')
+            processed_excel = output.getvalue()
 
+            # 顯示結果數量與下載按鈕
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                st.success(f"搜尋完成：共 {len(processed_results)} 筆資料 (已將可下載 PDF 之結果置頂)")
+            with col2:
+                st.download_button(
+                    label="📥 下載查詢結果 (Excel)",
+                    data=processed_excel,
+                    file_name=f"FDA_510k_Search_{datetime.now().strftime('%Y%m%d')}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True
+                )
+
+            # 顯示卡片
             for i, r in enumerate(processed_results, 1):
                 k = r.get('k_number')
                 pdf = r['pdf_url']
@@ -125,5 +160,6 @@ with st.sidebar:
     limit = st.slider("抓取筆數", min_value=10, max_value=100, value=50, step=10)
     submit = st.button("啟動查詢", use_container_width=True, type="primary")
 
+from datetime import datetime
 if submit:
     run_query(k_num, kw1, kw2, limit)
