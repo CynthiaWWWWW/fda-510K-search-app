@@ -14,18 +14,18 @@ st.markdown("""
     .index-badge { background: #4a4a4a; color: #ffffff; padding: 4px 10px; border-radius: 6px; font-size: 0.9em; font-weight: bold; margin-right: 12px; letter-spacing: 1px;}
     .code-label { background: #e9ecef; color: #495057; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-weight: bold; margin-right: 8px;}
 
-    /* --- 側邊欄精修排版 (緊湊版) --- */
+    /* --- 側邊欄精修排版 --- */
     
-    /* 1. 標題類：1. & 2. 項 */
+    /* 1. 標題類：1. & 2. 項 (粗體 16px) */
     [data-testid="stSidebar"] .stMarkdown p strong {
         font-size: 16px !important;
         font-weight: 800 !important;
         display: block;
-        margin-top: 8px !important;  /* 縮減區塊頂部間距 */
-        margin-bottom: 2px !important; /* 縮減標題與輸入框間距 */
+        margin-top: 8px !important;
+        margin-bottom: 2px !important;
     }
 
-    /* 2. 欄位標籤類：申請廠商、關鍵字等 */
+    /* 2. 欄位標籤類：申請廠商、關鍵字等 (非粗體 14px) */
     [data-testid="stSidebar"] .stWidgetLabel p {
         font-size: 14px !important;
         font-weight: 400 !important;
@@ -33,19 +33,25 @@ st.markdown("""
         margin-bottom: -5px !important;
     }
 
-    /* 縮小所有元件容器的間距 */
+    /* 縮小元件容器間距 */
     [data-testid="stSidebar"] .element-container {
         margin-bottom: 0px !important;
     }
 
-    /* 針對輸入框底部的微調，縮小號碼查詢與複合條件之間的距離 */
+    /* 輸入框底部邊距 */
     [data-testid="stSidebar"] .stTextInput {
         margin-bottom: 0px !important;
     }
 
-    /* 調整 Slider 頂部間距 */
+    /* Slider 頂部邊距 */
     [data-testid="stSidebar"] .stSlider {
         margin-top: 10px !important;
+    }
+
+    /* 按鈕文字大小調整 */
+    [data-testid="stSidebar"] .stButton button p {
+        font-size: 16px !important;
+        font-weight: 600 !important;
     }
     </style>
     <div class="main-title">🩺 FDA 510(k) 查詢工具</div>
@@ -166,4 +172,5 @@ with st.sidebar:
     limit = st.slider("筆數", min_value=10, max_value=100, value=50, step=10, label_visibility="collapsed")
     
     st.markdown('<div style="height: 10px;"></div>', unsafe_allow_html=True)
-    submit = st.button("啟動查詢", use_container_width=True, type="primary")
+    # 按鈕文字已改為「查詢」
+    submit = st.button("查詢", use_container_width=True, type="primary")
