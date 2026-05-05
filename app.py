@@ -33,12 +33,10 @@ def get_product_definition(p_code):
 
 # --- 4. 主查詢函式 ---
 def run_query(kn, k1, k2, app, lmt):
-    # 核心：構建後模糊搜尋字串
     if kn:
         q = f'k_number:"{kn}"'
     else:
         query_parts = []
-        # 將輸入的字串去除多餘空白，並加上 * 號進行後模糊搜尋
         if k1: query_parts.append(f'device_name:{k1.strip()}*')
         if k2: query_parts.append(f'device_name:{k2.strip()}*')
         if app: query_parts.append(f'applicant:{app.strip()}*')
@@ -81,7 +79,6 @@ def run_query(kn, k1, k2, app, lmt):
                 r['formatted_date'] = formatted_date
                 processed_results.append(r)
 
-            # 排序：有 PDF 的結果置頂
             processed_results.sort(key=lambda x: x['is_ok'], reverse=True)
 
             st.success(f"搜尋完成：共 {len(processed_results)} 筆資料 (已自動套用後模糊搜尋)")
@@ -122,8 +119,7 @@ def run_query(kn, k1, k2, app, lmt):
 # --- 5. 側邊欄設定 ---
 with st.sidebar:
     st.header("搜尋參數設定")
-    k_num = st.text_input("510(k) 號碼 (例如 K23)", "").strip().upper()
-    st.info("💡 輸入 K 加上前兩位數字可搜尋特定年份")
+    k_num = st.text_input("510(k) 號碼 (例如 K231234)", "").strip().upper()
     st.divider()
     kw1 = st.text_input("主關鍵字 (Device Name)", "Laser")
     kw2 = st.text_input("次要關鍵字", "")
