@@ -128,7 +128,7 @@ def run_query(kn, k1, k2, app, lmt):
 
 # --- 5. 側邊欄設定 ---
 with st.sidebar:
-    st.header("搜尋參數設定")
+    st.header("搜尋參數")
     k_num = st.text_input("1. 510(k) 號碼查詢", placeholder="例如: K231234").strip().upper()
     
     st.divider()
