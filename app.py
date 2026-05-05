@@ -112,7 +112,7 @@ with st.sidebar:
     st.divider()
     kw1 = st.text_input("主關鍵字 (Device Name)", "Laser")
     kw2 = st.text_input("次要關鍵字", "")
-    limit = st.slider("抓取筆數", 20, 50, 100)
+    limit = st.slider("抓取筆數", 20, 100, 50)
     submit = st.button("啟動查詢", use_container_width=True, type="primary")
 
 if submit:
