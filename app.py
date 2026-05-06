@@ -170,7 +170,7 @@ with st.sidebar:
     
     st.markdown('<div style="margin-top:20px;"></div>', unsafe_allow_html=True)
     
-    st.markdown('<span class="custom-label">2. 複合篩選條件 (支援模糊比對)</span>', unsafe_allow_html=True)
+    st.markdown('<span class="custom-label">2. 複合篩選條件 (支援模糊查詢)</span>', unsafe_allow_html=True)
     
     st.markdown('<span class="custom-label">申請廠商 (Applicant)</span>', unsafe_allow_html=True)
     app_name = st.text_input("hid_2", placeholder="例如: Medtronic")
