@@ -34,7 +34,7 @@ st.markdown("""
     /* 側邊欄頂部標題調整：設定為粗體 */
     [data-testid="stSidebar"] h2 {
         font-size: 1.1rem !important;
-        font-weight: bold !important; /* 改回粗體 */
+        font-weight: bold !important;
         margin-bottom: 8px !important;
         padding-bottom: 5px !important;
     }
@@ -47,6 +47,13 @@ st.markdown("""
     /* 確保輸入框容器不會有額外的底邊距 */
     div.stTextInput {
         margin-bottom: 0px !important;
+    }
+
+    /* 自定義分隔線樣式 */
+    .custom-hr {
+        margin: 1.2rem 0 !important;
+        border: 0;
+        border-top: 1px solid #ddd;
     }
     </style>
     
@@ -174,7 +181,8 @@ with st.sidebar:
     st.markdown('<span class="custom-label">產品次要關鍵字</span>', unsafe_allow_html=True)
     kw2 = st.text_input("hid_4", placeholder="選填")
     
-    st.markdown('<div style="margin-top:25px;"></div>', unsafe_allow_html=True)
+    # 補回分隔線
+    st.markdown('<hr class="custom-hr">', unsafe_allow_html=True)
     
     st.markdown('<span class="custom-label">抓取筆數</span>', unsafe_allow_html=True)
     limit = st.slider("limit_slider", min_value=10, max_value=100, value=50, step=10)
