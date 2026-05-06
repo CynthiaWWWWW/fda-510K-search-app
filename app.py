@@ -31,31 +31,30 @@ def get_product_definition(p_code):
         pass
     return "Unknown"
 
-# --- 4. 主查詢函式 ---
+# --- 4. 主查詢函式 (更新後的邏輯) ---
 def run_query(kn, k1, k2, app, lmt):
-    # 如果有 510(k) 號碼，則進行號碼唯一查詢
     if kn:
         q = f'k_number:"{kn}"'
     else:
-        # 建立多條件聯集 (AND 邏輯)
         query_parts = []
         
-        # 廠商欄位搜尋 (鎖定 applicant 欄位)
+        # 1. 廠商欄位搜尋 (改為模糊搜尋：移除引號並加上 *)
         if app.strip():
-            query_parts.append(f'applicant:"{app.strip()}*"')
+            clean_app = app.strip().replace('"', '')
+            # 這樣輸入 "Medtron" 會變成 "applicant:Medtron*"
+            query_parts.append(f'applicant:{clean_app}*')
         
-        # --- 這裡開始是你要替換的部分 ---
-        # 產品主要關鍵字搜尋 (修改後的模糊搜尋邏輯)
+        # 2. 產品主要關鍵字搜尋
         if k1.strip():
             clean_k1 = k1.strip().replace('"', '')
             query_parts.append(f'device_name:{clean_k1}*')
         
-        # 產品次要關鍵字搜尋
+        # 3. 產品次要關鍵字搜尋
         if k2.strip():
             clean_k2 = k2.strip().replace('"', '')
             query_parts.append(f'device_name:{clean_k2}*')
-        # --- 這裡結束替換 ---
         
+        # 使用 +AND+ 連結所有條件
         q = "+AND+".join(query_parts)
 
     if not q: 
