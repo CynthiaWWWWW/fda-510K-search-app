@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 
 # --- 1. 網頁基本設定 ---
+# 設定網頁標題、分頁圖示以及佈局模式（wide 為寬螢幕模式）
 st.set_page_config(page_title="FDA 510(k) 查詢器", page_icon="🩺", layout="wide")
 
 # --- 2. CSS 樣式 ---
@@ -14,38 +15,38 @@ st.markdown("""
     .index-badge { background: #4a4a4a; color: #ffffff; padding: 4px 10px; border-radius: 6px; font-size: 0.9em; font-weight: bold; margin-right: 12px; letter-spacing: 1px;}
     .code-label { background: #e9ecef; color: #495057; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-weight: bold; margin-right: 8px;}
 
-    /* 側邊欄緊湊排版設定 */
-    /* 隱藏原生標籤 */
+    /* 側邊欄間距平衡設定 */
+    /* 隱藏原生標籤以消除元件間的預設格式差異 */
     [data-testid="stSidebar"] label {
         display: none;
     }
 
-    /* 統一標籤樣式並縮小間距 */
+    /* 統一所有標題與標籤，設定中等舒適的間距 */
     .custom-label {
         font-size: 1rem !important;
         font-weight: normal !important;
         color: #31333F;
         display: block;
-        margin-top: 6px;   /* 縮減上方間距 */
-        margin-bottom: 2px; /* 縮減與輸入框的距離 */
+        margin-top: 10px;   /* 平衡間距：從極度緊密的 6px 放寬至 10px */
+        margin-bottom: 4px; /* 與輸入框保持適度呼吸感 */
     }
 
-    /* 側邊欄頂部標題 */
+    /* 側邊欄頂部標題調整 */
     [data-testid="stSidebar"] h2 {
         font-size: 1.1rem !important;
         font-weight: normal !important;
-        margin-bottom: 5px !important;
-        padding-bottom: 0px !important;
+        margin-bottom: 8px !important;
+        padding-bottom: 5px !important;
     }
 
-    /* 強制縮小 Streamlit 元件之間的預設垂直間隙 */
+    /* 設定側邊欄元件之間的標準垂直間隙 */
     [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
-        gap: 0.2rem !important;
+        gap: 0.5rem !important; /* 折衷間距：既不緊密也不稀疏 */
     }
 
-    /* 針對輸入框容器微調，減少下方溢出的空間 */
+    /* 確保輸入框容器不會有額外的底邊距 */
     div.stTextInput {
-        margin-bottom: -10px !important;
+        margin-bottom: 0px !important;
     }
     </style>
     
@@ -185,15 +186,19 @@ def run_query(kn, k1, k2, app, lmt):
         except Exception as e:
             st.error(f"連線發生錯誤：{e}")
 
-# --- 5. 側邊欄設定 ---
+# --- 5. 側邊欄設定 (使用者輸入介面) ---
 with st.sidebar:
     st.header("搜尋參數設定")
     
+    # 1. 號碼查詢區
     st.markdown('<span class="custom-label">1. 依 510(k) 號碼查詢 (完整號碼)</span>', unsafe_allow_html=True)
     k_num = st.text_input("hid_1", placeholder="例如: K231234").strip().upper()
     
-    # 增加一個稍微大一點的頂距來區分第一區與第二區
-    st.markdown('<span class="custom-label" style="margin-top:12px;">2. 複合篩選條件 (支援模糊比對)</span>', unsafe_allow_html=True)
+    # 區塊間距
+    st.markdown('<div style="margin-top:20px;"></div>', unsafe_allow_html=True)
+    
+    # 2. 複合查詢區
+    st.markdown('<span class="custom-label">2. 複合篩選條件 (支援模糊比對)</span>', unsafe_allow_html=True)
     
     st.markdown('<span class="custom-label">申請廠商 (Applicant)</span>', unsafe_allow_html=True)
     app_name = st.text_input("hid_2", placeholder="例如: Medtronic")
@@ -204,10 +209,11 @@ with st.sidebar:
     st.markdown('<span class="custom-label">產品次要關鍵字</span>', unsafe_allow_html=True)
     kw2 = st.text_input("hid_4", placeholder="選填")
     
-    # 滑桿與按鈕
-    st.markdown('<div style="margin-top:15px;"></div>', unsafe_allow_html=True)
+    # 按鈕與滑桿區間距
+    st.markdown('<div style="margin-top:25px;"></div>', unsafe_allow_html=True)
     limit = st.slider("抓取筆數", min_value=10, max_value=100, value=50, step=10)
     submit = st.button("啟動查詢", use_container_width=True, type="primary")
 
+# 當按下查詢按鈕時觸發
 if submit:
     run_query(k_num, kw1, kw2, app_name, limit)
