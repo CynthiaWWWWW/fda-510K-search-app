@@ -170,7 +170,7 @@ with st.sidebar:
     
     st.markdown('<div style="margin-top:20px;"></div>', unsafe_allow_html=True)
     
-    st.markdown('<span class="custom-label">2. 複合篩選條件 (支援模糊查詢)</span>', unsafe_allow_html=True)
+    st.markdown('<span class="custom-label">2. 複合篩選條件 (模糊查詢)</span>', unsafe_allow_html=True)
     
     st.markdown('<span class="custom-label">申請廠商 (Applicant)</span>', unsafe_allow_html=True)
     app_name = st.text_input("hid_2", placeholder="例如: Medtronic")
@@ -185,7 +185,7 @@ with st.sidebar:
     st.markdown('<hr class="custom-hr">', unsafe_allow_html=True)
     
     st.markdown('<span class="custom-label">抓取筆數</span>', unsafe_allow_html=True)
-    limit = st.slider("limit_slider", min_value=10, max_value=100, value=50, step=10)
+    limit = st.slider("limit_slider", min_value=10, max_value=100, value=30, step=10)
     
     submit = st.button("啟動查詢", use_container_width=True, type="primary")
 
