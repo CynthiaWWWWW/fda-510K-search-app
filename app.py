@@ -6,27 +6,27 @@ import requests
 st.set_page_config(page_title="FDA 510(k) 查詢器", page_icon="🩺", layout="wide")
 
 # --- 2. CSS 樣式 ---
+
 st.markdown("""
+
     <style>
-    /* ... 你原本的 CSS ... */
 
-    /* 調整側邊欄標題 (搜尋參數設定) - 調小一號 */
-    [data-testid="stSidebar"] h2 {
-        font-size: 1.2rem !important;
-    }
+    .main-title { font-size: 28px; font-weight: 800; color: #1E1E1E; text-align: center; margin-bottom: 10px; }
 
-    /* 調整第一個輸入框的標籤 (510(k) 號碼查詢) - 調大一號 */
-    /* 這裡使用 nth-of-type 定位第一個 stWidget */
-    [data-testid="stSidebar"] .stWidget:nth-of-type(1) label p {
-        font-size: 1.3rem !important;
-        font-weight: 600;
-    }
-    
-    /* 如果想要讓其他輸入框標籤維持原樣或變小，可以設定這裡 */
-    [data-testid="stSidebar"] label p {
-        font-size: 1rem;
-    }
+    .info-text { font-size: 16px; color: #666; text-align: center; margin-bottom: 20px; }
+
+    .card { border-left: 6px solid #ccc; padding: 16px; background: #f8f9fa; border-radius: 10px; margin-bottom: 15px; box-shadow: 2px 2px 5px rgba(0,0,0,0.05); }
+
+    .index-badge { background: #4a4a4a; color: #ffffff; padding: 4px 10px; border-radius: 6px; font-size: 0.9em; font-weight: bold; margin-right: 12px; letter-spacing: 1px;}
+
+    .code-label { background: #e9ecef; color: #495057; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-weight: bold; margin-right: 8px;}
+
     </style>
+
+    <div class="main-title">🩺 FDA 510(k) 查詢工具</div>
+
+    <div class="info-text">連線 OpenFDA 資料庫進行精確欄位篩選</div>
+
     """, unsafe_allow_html=True)
 
 # --- 3. 核心輔助函式 ---
