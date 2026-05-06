@@ -14,27 +14,38 @@ st.markdown("""
     .index-badge { background: #4a4a4a; color: #ffffff; padding: 4px 10px; border-radius: 6px; font-size: 0.9em; font-weight: bold; margin-right: 12px; letter-spacing: 1px;}
     .code-label { background: #e9ecef; color: #495057; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-weight: bold; margin-right: 8px;}
 
-    /* 側邊欄專屬對齊樣式 */
-    /* 隱藏原生標籤以消除元件間的預設格式差異 */
+    /* 側邊欄緊湊排版設定 */
+    /* 隱藏原生標籤 */
     [data-testid="stSidebar"] label {
         display: none;
     }
 
-    /* 統一所有標題與標籤的大小、粗細與顏色 */
+    /* 統一標籤樣式並縮小間距 */
     .custom-label {
         font-size: 1rem !important;
         font-weight: normal !important;
         color: #31333F;
         display: block;
-        margin-top: 12px;
-        margin-bottom: 4px;
+        margin-top: 6px;   /* 縮減上方間距 */
+        margin-bottom: 2px; /* 縮減與輸入框的距離 */
     }
 
-    /* 側邊欄頂部標題調整 */
+    /* 側邊欄頂部標題 */
     [data-testid="stSidebar"] h2 {
         font-size: 1.1rem !important;
         font-weight: normal !important;
-        margin-bottom: 10px !important;
+        margin-bottom: 5px !important;
+        padding-bottom: 0px !important;
+    }
+
+    /* 強制縮小 Streamlit 元件之間的預設垂直間隙 */
+    [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+        gap: 0.2rem !important;
+    }
+
+    /* 針對輸入框容器微調，減少下方溢出的空間 */
+    div.stTextInput {
+        margin-bottom: -10px !important;
     }
     </style>
     
@@ -178,13 +189,11 @@ def run_query(kn, k1, k2, app, lmt):
 with st.sidebar:
     st.header("搜尋參數設定")
     
-    # 移除 divider，改用 custom-label 統一格式標籤
     st.markdown('<span class="custom-label">1. 依 510(k) 號碼查詢 (完整號碼)</span>', unsafe_allow_html=True)
     k_num = st.text_input("hid_1", placeholder="例如: K231234").strip().upper()
     
-    st.markdown('<br>', unsafe_allow_html=True) # 使用換行代替 divider 增加一點呼吸感
-    
-    st.markdown('<span class="custom-label">2. 複合篩選條件 (支援模糊比對)</span>', unsafe_allow_html=True)
+    # 增加一個稍微大一點的頂距來區分第一區與第二區
+    st.markdown('<span class="custom-label" style="margin-top:12px;">2. 複合篩選條件 (支援模糊比對)</span>', unsafe_allow_html=True)
     
     st.markdown('<span class="custom-label">申請廠商 (Applicant)</span>', unsafe_allow_html=True)
     app_name = st.text_input("hid_2", placeholder="例如: Medtronic")
@@ -195,8 +204,8 @@ with st.sidebar:
     st.markdown('<span class="custom-label">產品次要關鍵字</span>', unsafe_allow_html=True)
     kw2 = st.text_input("hid_4", placeholder="選填")
     
-    st.markdown('<br>', unsafe_allow_html=True)
-    
+    # 滑桿與按鈕
+    st.markdown('<div style="margin-top:15px;"></div>', unsafe_allow_html=True)
     limit = st.slider("抓取筆數", min_value=10, max_value=100, value=50, step=10)
     submit = st.button("啟動查詢", use_container_width=True, type="primary")
 
