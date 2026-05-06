@@ -135,7 +135,7 @@ def run_query(kn, k1, k2, app, lmt):
 # --- 5. 側邊欄設定 ---
 with st.sidebar:
     st.header("搜尋參數設定")
-    k_num = st.text_input("1. 按 510(k) 號碼查詢 (唯一)", placeholder="例如: K231234").strip().upper()
+    k_num = st.text_input("1. 依 510(k) 號碼查詢 (完整號碼)", placeholder="例如: K231234").strip().upper()
     
     st.divider()
     st.write("2. 複合篩選條件 (可同時填寫)")
