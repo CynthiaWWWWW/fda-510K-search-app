@@ -46,10 +46,10 @@ def run_query(kn, k1, k2, app, lmt):
         
         # 產品名稱搜尋 (鎖定 device_name 欄位)
         if k1.strip():
-            query_parts.append(f'device_name:"{k1.strip()}*"')
+            query_parts.append(f'device_name:({k1.strip()})')
         
         if k2.strip():
-            query_parts.append(f'device_name:"{k2.strip()}*"')
+            query_parts.append(f'device_name:({k1.strip()})')
         
         q = "+AND+".join(query_parts)
 
