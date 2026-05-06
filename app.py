@@ -31,10 +31,10 @@ st.markdown("""
         margin-bottom: 4px; /* 與輸入框保持適度呼吸感 */
     }
 
-    /* 側邊欄頂部標題調整 */
+    /* 側邊欄頂部標題調整：設定為粗體 */
     [data-testid="stSidebar"] h2 {
         font-size: 1.1rem !important;
-        font-weight: normal !important;
+        font-weight: bold !important; /* 改回粗體 */
         margin-bottom: 8px !important;
         padding-bottom: 5px !important;
     }
@@ -156,7 +156,7 @@ def run_query(kn, k1, k2, app, lmt):
 
 # --- 5. 側邊欄設定 ---
 with st.sidebar:
-    st.header("搜尋參數設定")
+    st.header("搜尋參數設定") # 粗體標題
     
     st.markdown('<span class="custom-label">1. 依 510(k) 號碼查詢 (完整號碼)</span>', unsafe_allow_html=True)
     k_num = st.text_input("hid_1", placeholder="例如: K231234").strip().upper()
@@ -176,7 +176,6 @@ with st.sidebar:
     
     st.markdown('<div style="margin-top:25px;"></div>', unsafe_allow_html=True)
     
-    # 補回抓取筆數的標題，並統一格式
     st.markdown('<span class="custom-label">抓取筆數</span>', unsafe_allow_html=True)
     limit = st.slider("limit_slider", min_value=10, max_value=100, value=50, step=10)
     
