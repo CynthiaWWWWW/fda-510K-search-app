@@ -44,17 +44,24 @@ def run_query(kn, k1, k2, app, lmt):
         if app.strip():
             query_parts.append(f'applicant:"{app.strip()}*"')
         
-        # 產品名稱搜尋 (鎖定 device_name 欄位)
+        # --- 這裡開始是你要替換的部分 ---
+        # 產品主要關鍵字搜尋 (修改後的模糊搜尋邏輯)
         if k1.strip():
-            query_parts.append(f'device_name:({k1.strip()})')
+            clean_k1 = k1.strip().replace('"', '')
+            query_parts.append(f'device_name:{clean_k1}*')
         
+        # 產品次要關鍵字搜尋
         if k2.strip():
-            query_parts.append(f'device_name:({k1.strip()})')
+            clean_k2 = k2.strip().replace('"', '')
+            query_parts.append(f'device_name:{clean_k2}*')
+        # --- 這裡結束替換 ---
         
         q = "+AND+".join(query_parts)
 
     if not q: 
         return st.error("請至少輸入一個搜尋條件 (號碼、廠商或產品關鍵字)")
+    
+    # ... 後面的 url = ... 和 session 邏輯保持不變
 
     url = f'https://api.fda.gov/device/510k.json?search={q}&limit={lmt}'
     session = requests.Session()
