@@ -36,11 +36,6 @@ st.markdown("""
         font-weight: normal !important;
         margin-bottom: 10px !important;
     }
-
-    /* 分隔線間距調整 */
-    [data-testid="stSidebar"] hr {
-        margin: 1.2rem 0 !important;
-    }
     </style>
     
     <div class="main-title">🩺 FDA 510(k) 查詢工具</div>
@@ -183,11 +178,11 @@ def run_query(kn, k1, k2, app, lmt):
 with st.sidebar:
     st.header("搜尋參數設定")
     
-    # 使用 custom-label 統一所有標籤格式
+    # 移除 divider，改用 custom-label 統一格式標籤
     st.markdown('<span class="custom-label">1. 依 510(k) 號碼查詢 (完整號碼)</span>', unsafe_allow_html=True)
     k_num = st.text_input("hid_1", placeholder="例如: K231234").strip().upper()
     
-    st.divider()
+    st.markdown('<br>', unsafe_allow_html=True) # 使用換行代替 divider 增加一點呼吸感
     
     st.markdown('<span class="custom-label">2. 複合篩選條件 (支援模糊比對)</span>', unsafe_allow_html=True)
     
@@ -200,7 +195,8 @@ with st.sidebar:
     st.markdown('<span class="custom-label">產品次要關鍵字</span>', unsafe_allow_html=True)
     kw2 = st.text_input("hid_4", placeholder="選填")
     
-    st.divider()
+    st.markdown('<br>', unsafe_allow_html=True)
+    
     limit = st.slider("抓取筆數", min_value=10, max_value=100, value=50, step=10)
     submit = st.button("啟動查詢", use_container_width=True, type="primary")
 
